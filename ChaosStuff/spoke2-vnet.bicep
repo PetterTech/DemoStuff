@@ -1,5 +1,7 @@
 param location string
 param azureFirewallPrivateIP string
+param spoke2iprange string
+param spoke2defaultsubnetrange string
 
 resource routeTable 'Microsoft.Network/routeTables@2023-09-01' = {
   name: 'rt-spoke2'
@@ -24,14 +26,14 @@ resource spoke2vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   properties: {
     addressSpace: {
       addressPrefixes: [
-        '10.201.0.0/24'
+        spoke2iprange
       ]
     }
     subnets: [
       {
         name: 'default'
         properties: {
-          addressPrefix: '10.201.0.0/26'
+          addressPrefix: spoke2defaultsubnetrange
           routeTable: {
             id: routeTable.id
           }
@@ -48,3 +50,4 @@ resource spoke2vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
 
 output spoke2vnetID string = spoke2vnet.id
 output spoke2subnetID string = spoke2vnet.properties.subnets[0].id
+output spoke2iprange string = spoke2vnet.properties.addressSpace.addressPrefixes[0]

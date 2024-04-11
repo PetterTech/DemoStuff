@@ -107,9 +107,26 @@ resource createDNSConditionalForwarder 'Microsoft.Compute/virtualMachines/runCom
   name: 'createDNSConditionalForwarder'
   location: location
   parent: Spoke1VM1
+  dependsOn: [
+    installDNSRole
+  ]
   properties: {
     source: {
       script: 'Add-DnsServerConditionalForwarderZone -Name "file.${environment().suffixes.storage}" -MasterServers 10.200.0.70'
+    }
+  }
+}
+
+resource setDNSForwarder 'Microsoft.Compute/virtualMachines/runCommands@2023-09-01' = {
+  name: 'setDNSForwarder'
+  location: location
+  parent: Spoke1VM1
+  dependsOn: [
+    installDNSRole
+  ]
+  properties: {
+    source: {
+      script: 'Set-DnsServerForwarder -IPAddress 10.200.0.70'
     }
   }
 }

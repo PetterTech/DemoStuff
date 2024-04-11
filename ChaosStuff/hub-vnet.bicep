@@ -1,4 +1,10 @@
 param location string
+param hubiprange string
+param firewallsubnetrange string
+param dnsinboundrange string
+param dnsoutboundrange string
+param bastionrange string
+
 
 resource hubvnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   name: 'vnet-Hub'
@@ -6,20 +12,20 @@ resource hubvnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   properties: {
     addressSpace: {
       addressPrefixes: [
-        '10.200.0.0/24'
+        hubiprange
       ]
     }
     subnets: [
       {
         name: 'AzureFirewallSubnet'
         properties: {
-          addressPrefix: '10.200.0.0/26'
+          addressPrefix: firewallsubnetrange
         }
       }
       {
         name: 'Inbound'
         properties: {
-          addressPrefix: '10.200.0.64/26'
+          addressPrefix: dnsinboundrange
           delegations: [
             {
               name: 'Microsoft.Network.dnsResolvers'
@@ -33,7 +39,7 @@ resource hubvnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       {
         name: 'Outbound'
         properties: {
-          addressPrefix: '10.200.0.128/26'
+          addressPrefix: dnsoutboundrange
           delegations: [
             {
               name: 'Microsoft.Network.dnsResolvers'
@@ -47,7 +53,7 @@ resource hubvnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       {
         name: 'AzureBastionSubnet'
         properties: {
-          addressPrefix: '10.200.0.192/26'
+          addressPrefix: bastionrange
         }
       }
     ]

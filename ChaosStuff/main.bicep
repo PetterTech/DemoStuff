@@ -5,10 +5,33 @@ param localAdminUsername string = 'pettertech'
 @secure()
 param localAdminPassword string = 'LongAndStrongP@ssw0rd1234'
 param storageAccountName string = 'pt${uniqueString(resourceGroup().id)}'
+param hubiprange string = '10.200.0.0/24'
+param firewallsubnetrange string = '10.200.0.0/26'
+param dnsinboundrange string = '10.200.0.64/26'
+param dnsoutboundrange string = '10.200.0.128/26'
+param bastionrange string = '10.200.0.192/26'
+param spoke1iprange string = '10.100.0.0/24'
+param spoke2iprange string = '10.201.0.0/24'
+
+var spoke1defaultsubnetrangearray = [
+  (split(spoke1iprange,'/')[0])
+  '26'
+]
+var spoke1defaultsubnetrange = join(spoke1defaultsubnetrangearray,'/')
+var spoke2defaultsubnetrangearray = [
+  (split(spoke2iprange,'/')[0])
+  '26'  
+]
+var spoke2defaultsubnetrange = join(spoke2defaultsubnetrangearray,'/')
 
 module hubvnet 'hub-vnet.bicep' = {
   name: 'hubvnet'
   params: {
+    bastionrange: bastionrange
+    dnsinboundrange: dnsinboundrange
+    dnsoutboundrange: dnsoutboundrange
+    firewallsubnetrange: firewallsubnetrange
+    hubiprange: hubiprange
     location: location
   }
 }
@@ -42,9 +65,23 @@ module hubazurefirewall 'hub-firewall.bicep' = {
   params: {
     location: location
     firewallsubnetID: hubvnet.outputs.firewallSubnetID
+    spoke1iprange: spoke1iprange
+    spoke2iprange: spoke2iprange
   }
   dependsOn: [
     hubvnet
+  ]
+}
+
+module hubazurefirewallrulegroups 'hub-firewallRuleGroups.bicep' = {
+  name: 'hubazurefirewallrulegroups'
+  params: {
+    firewallPolicyName: hubazurefirewall.outputs.azureFirewallPolicyName
+    spoke1ipgroupID: hubazurefirewall.outputs.spoke1ipgroupID
+    spoke2ipgroupID: hubazurefirewall.outputs.spoke2ipgroupID
+  }
+  dependsOn: [
+    hubazurefirewall
   ]
 }
 
@@ -53,6 +90,8 @@ module spoke1vnet 'spoke1-vnet.bicep' = {
   params: {
     location: location
     azureFirewallPrivateIP: hubazurefirewall.outputs.azureFirewallPrivateIP
+    spoke1defaultsubnetrange: spoke1defaultsubnetrange
+    spoke1iprange: spoke1iprange
   }
 }
 
@@ -61,6 +100,8 @@ module spoke2vnet 'spoke2-vnet.bicep' = {
   params: {
     location: location
     azureFirewallPrivateIP: hubazurefirewall.outputs.azureFirewallPrivateIP
+    spoke2defaultsubnetrange: spoke2defaultsubnetrange
+    spoke2iprange: spoke2iprange
   }
 }
 
