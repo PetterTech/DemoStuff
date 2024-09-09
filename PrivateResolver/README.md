@@ -2,6 +2,8 @@
 This bicep template will create a demo environment for the private resolver feature in Azure.
 You can opt for creating a fully working setup with private resolver right away, or you can deploy a setup without the private resolver and manually add that. The latter is useful if you want to learn how to add private resolver to an existing environment.
 
+The code in this folder was referenced in this video: https://youtu.be/V7tHg_954t8
+
 Prerequisites:
 - Bicep installed
 - Azure Powershell modules:

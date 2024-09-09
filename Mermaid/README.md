@@ -1,6 +1,7 @@
 # Mermaid examples
 
-This folder contains examples of Mermaid diagrams. Just random things you can do with Mermaid, like this thing:
+This folder contains examples of Mermaid diagrams. Just random things you can do with Mermaid, like the thing down below.  
+The code in this folder have been referenced in this video: https://youtu.be/qGsQolMh9zE
 
 ``` mermaid
 flowchart LR
