@@ -8,6 +8,7 @@ param vmSize string
 param OSVersion string
 param vmStorageAccountType string
 param adminUsername string
+@secure()
 param adminPassword string
 param securityProfileJson object
 
