@@ -84,7 +84,7 @@ module bastion 'bastion.bicep' = {
 }
 
 module vms 'vms.bicep' = {
-  name: 'vms'
+  name: 'vms-ChaosStuff'
   params: {
     location: location
     projectName: projectName

@@ -41,30 +41,33 @@ resource vNet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
         vNetAddressPrefix
       ]
     }
+    subnets: [
+      {
+        name: vNetSubnetName
+        properties: {
+          addressPrefix: vNetSubnetAddressPrefix
+          natGateway: {
+            id: natGatewayId
+          }
+          networkSecurityGroup: {
+            id: nsg.id
+          }
+        }
+      }
+      {
+        name: bastionSubnetName
+        properties: {
+          addressPrefix: vNetBastionSubnetAddressPrefix
+        }
+      }
+    ]
   }
 }
 
-resource vNetName_bastionSubnet 'Microsoft.Network/virtualNetworks/subnets@2021-08-01' = {
-  parent: vNet
-  name: bastionSubnetName
-  properties: {
-    addressPrefix: vNetBastionSubnetAddressPrefix
-  }
-  dependsOn: [
-    vNetName_vNetSubnetName
-  ]
-}
-
-resource vNetName_vNetSubnetName 'Microsoft.Network/virtualNetworks/subnets@2021-08-01' = {
-  parent: vNet
+resource vmsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
   name: vNetSubnetName
-  properties: {
-    addressPrefix: vNetSubnetAddressPrefix
-    natGateway: {
-      id: natGatewayId
-    }
-  }
+  parent: vNet
 }
 
-output vmSubnetId string = vNetName_vNetSubnetName.id
+output vmSubnetId string = vmsubnet.id
 output nsgId string = nsg.id

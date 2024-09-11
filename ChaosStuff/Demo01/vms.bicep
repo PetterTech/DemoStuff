@@ -78,6 +78,11 @@ resource project_vm_1 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in
         provisionVMAgent: true
       }
     }
+    diagnosticsProfile: {
+      bootDiagnostics: {
+        enabled: true
+      }
+    }
     securityProfile: securityProfileJson
   }
   dependsOn: [
