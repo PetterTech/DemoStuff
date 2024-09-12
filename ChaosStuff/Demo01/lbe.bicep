@@ -81,3 +81,5 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
     ]
   }
 }
+
+output lbPublicIpAddressId string = lbPublicIPAddress.properties.ipAddress

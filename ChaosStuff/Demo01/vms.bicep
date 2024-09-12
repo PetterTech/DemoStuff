@@ -109,3 +109,7 @@ resource project_vm_1_InstallWebServer 'Microsoft.Compute/virtualMachines/extens
   ]
 }
 ]
+
+output vm1Id string = project_vm_1[0].id
+output vm2Id string = project_vm_1[1].id
+output vm3Id string = project_vm_1[2].id

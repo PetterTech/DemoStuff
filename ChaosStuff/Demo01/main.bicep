@@ -16,7 +16,6 @@ var securityProfileJson = {
   }
   securityType: securityType
 }
-
 var lbName = 'lbe-${projectName}'
 var lbSkuName = 'Standard'
 var lbPublicIpAddressName = 'pip-lbe${projectName}'
@@ -100,3 +99,31 @@ module vms 'vms.bicep' = {
     lbBackendPoolName: lbBackendPoolName
   }
 }
+
+module chaosExperiments 'chaos-experiments.bicep' = {
+  name: 'chaosExperiments'
+  params: {
+    location: location
+    projectName: projectName
+    vm1Id: vms.outputs.vm1Id
+    vm2Id: vms.outputs.vm2Id
+  }
+}
+
+module chaosPerms 'chaos-perms.bicep' = {
+  name: 'chaosPerms'
+  params: {
+    id1: chaosExperiments.outputs.redeployVM1Id
+    id2: chaosExperiments.outputs.shutdownVM2Id
+  }
+}
+
+module chaosTargets 'chaos-targets.bicep' = {
+  name: 'chaosTargets'
+  params: {
+    location: location
+    projectName: projectName
+  }
+}
+
+output loadBalancerPublicIPAddress string = lbe.outputs.lbPublicIpAddressId
