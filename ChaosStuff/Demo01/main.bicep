@@ -37,7 +37,7 @@ var natGatewayName = 'ngw-${projectName}'
 var natGatewayPublicIPAddressName = 'pip-ngw${projectName}'
 
 module natgw 'natgw.bicep' = {
-  name: natGatewayName
+  name: 'NATGateway'
   params: {
     location: location
     natGatewayPublicIPAddressName: natGatewayPublicIPAddressName
@@ -46,7 +46,7 @@ module natgw 'natgw.bicep' = {
 }
 
 module vnet 'vnet.bicep' = {
-  name: vNetName
+  name: 'vNet'
   params: {
     location: location
     nsgName: nsgName
@@ -61,7 +61,7 @@ module vnet 'vnet.bicep' = {
 }
 
 module lbe 'lbe.bicep' = {
-  name: lbName
+  name: 'LoadBalancer'
   params: {
     location: location
     lbName: lbName
@@ -74,16 +74,18 @@ module lbe 'lbe.bicep' = {
 }
 
 module bastion 'bastion.bicep' = {
-  name: bastionName
+  name: 'Bastion'
   params: {
     location: location
     bastionPublicIPAddressName: bastionPublicIPAddressName
     basSkuName: basSkuName
+    bastionSubnetID: vnet.outputs.bastionSubnetId
+    bastionName: bastionName
   }
 }
 
 module vms 'vms.bicep' = {
-  name: 'vms-ChaosStuff'
+  name: 'VMs'
   params: {
     location: location
     projectName: projectName
@@ -124,6 +126,9 @@ module chaosTargets 'chaos-targets.bicep' = {
     location: location
     projectName: projectName
   }
+  dependsOn: [
+    vms
+  ]
 }
 
 output loadBalancerPublicIPAddress string = lbe.outputs.lbPublicIpAddressId

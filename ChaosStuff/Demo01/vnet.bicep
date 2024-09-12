@@ -69,5 +69,11 @@ resource vmsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existin
   parent: vNet
 }
 
+resource bastionSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+  name: bastionSubnetName
+  parent: vNet
+}
+
 output vmSubnetId string = vmsubnet.id
+output bastionSubnetId string = bastionSubnet.id
 output nsgId string = nsg.id
