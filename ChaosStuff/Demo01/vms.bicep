@@ -12,7 +12,7 @@ param adminUsername string
 param adminPassword string
 param securityProfileJson object
 
-resource project_vm_networkInterface 'Microsoft.Network/networkInterfaces@2021-08-01' = [for i in range(0, 3): {
+resource vm_NIC 'Microsoft.Network/networkInterfaces@2021-08-01' = [for i in range(0, 3): {
   name: 'nic-${projectName}-vm${(i + 1)}'
   location: location
   properties: {
@@ -39,7 +39,7 @@ resource project_vm_networkInterface 'Microsoft.Network/networkInterfaces@2021-0
 }
 ]
 
-resource project_vm_1 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(1, 3): {
+resource vm 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(1, 3): {
   name: '${projectName}-vm${i}'
   location: location
   zones: [
@@ -87,12 +87,12 @@ resource project_vm_1 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in
     securityProfile: securityProfileJson
   }
   dependsOn: [
-    project_vm_networkInterface
+    vm_NIC
   ]
 }
 ]
 
-resource project_vm_1_InstallWebServer 'Microsoft.Compute/virtualMachines/extensions@2021-11-01' = [for i in range(0, 3): {
+resource vm_InstallWebServer 'Microsoft.Compute/virtualMachines/extensions@2021-11-01' = [for i in range(0, 3): {
   name: '${projectName}-vm${(i + 1)}/InstallWebServer'
   location: location
   properties: {
@@ -105,11 +105,11 @@ resource project_vm_1_InstallWebServer 'Microsoft.Compute/virtualMachines/extens
     }
   }
   dependsOn: [
-    project_vm_1
+    vm
   ]
 }
 ]
 
-output vm1Id string = project_vm_1[0].id
-output vm2Id string = project_vm_1[1].id
-output vm3Id string = project_vm_1[2].id
+output vm1Id string = vm[0].id
+output vm2Id string = vm[1].id
+output vm3Id string = vm[2].id
