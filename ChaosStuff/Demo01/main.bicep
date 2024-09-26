@@ -35,6 +35,7 @@ var bastionPublicIPAddressName = 'pip-bas${projectName}'
 var vmStorageAccountType = 'Premium_LRS'
 var natGatewayName = 'ngw-${projectName}'
 var natGatewayPublicIPAddressName = 'pip-ngw${projectName}'
+var managedIdentityName = 'id-${projectName}'
 
 module natgw 'natgw.bicep' = {
   name: 'NATGateway'
@@ -102,6 +103,13 @@ module vms 'vms.bicep' = {
   }
 }
 
+module managedId 'managedId.bicep' = {
+  name: 'ManagedIdentity'
+  params: {
+    managedIdentityName: managedIdentityName
+  }
+}
+
 module chaosExperiments 'chaos-experiments.bicep' = {
   name: 'chaosExperiments'
   params: {
@@ -117,6 +125,7 @@ module chaosPerms 'chaos-perms.bicep' = {
   params: {
     id1: chaosExperiments.outputs.redeployVM1Id
     id2: chaosExperiments.outputs.shutdownVM2Id
+    managedIdentityPrincipalID: managedId.outputs.managedIdentityPrincipalId
   }
 }
 
@@ -125,6 +134,7 @@ module chaosTargets 'chaos-targets.bicep' = {
   params: {
     location: location
     projectName: projectName
+    managedIdentityClientId: managedId.outputs.managedIdentityClientId
   }
   dependsOn: [
     vms
