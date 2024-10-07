@@ -67,10 +67,10 @@ resource "azurerm_windows_virtual_machine" "managementvm" {
   name                  = "managementvm"
   resource_group_name   = azurerm_resource_group.rg.name
   location              = azurerm_resource_group.rg.location
-  size                  = "Standard_Da2ds_v5"
+  size                  = "Standard_D2ads_v5"
   admin_username        = "adminuser"
   admin_password        = "Password1234!"
-  network_interface_ids = [azurerm_network_interface.nic.id]
+  network_interface_ids = [azurerm_network_interface.managementvmnic.id]
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
