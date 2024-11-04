@@ -21,7 +21,7 @@ resource devCenter 'Microsoft.DevCenter/devcenters@2024-08-01-preview' = {
 }
 
 resource devBoxDefinition 'Microsoft.DevCenter/devcenters/devboxdefinitions@2024-08-01-preview' = {
-  name: 'defaultDefinition'
+  name: '${projectName}-definition'
   parent: devCenter
   location: location
   properties:{
