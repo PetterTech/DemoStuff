@@ -57,10 +57,7 @@ resource projectPool 'Microsoft.DevCenter/projects/pools@2024-08-01-preview' = {
       status: 'Enabled'
       gracePeriodMinutes: 60
     }
-    virtualNetworkType: 'Managed'
-    managedVirtualNetworkRegions: [
-      location
-    ]
+    virtualNetworkType: 'Unmanaged'
   }
 }
 
