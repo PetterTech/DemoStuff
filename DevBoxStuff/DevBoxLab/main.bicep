@@ -1,7 +1,7 @@
 targetScope = 'resourceGroup'
 
 param location string = 'swedencentral'
-param devCenterName string
+param projectName string
 param devPrincipalId string
 
 module natGateway 'natGateway.bicep' = {
@@ -31,7 +31,8 @@ module devBox 'devbox.bicep' = {
   name: 'devCenter'
   params: {
     location: location
-    devCenterName: devCenterName
+    projectName: projectName
     devPrincipalId: devPrincipalId
+    vmSubnetId: vnet.outputs.vmSubnetId
   }
 }

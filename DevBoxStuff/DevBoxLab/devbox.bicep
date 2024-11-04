@@ -1,15 +1,16 @@
-param devCenterName string
+param projectName string
 param devPrincipalId string
 param location string
+param vmSubnetId string
 
 resource devCenter 'Microsoft.DevCenter/devcenters@2024-08-01-preview' = {
-  name: devCenterName
+  name: '${projectName}-devCenter'
   location: location
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
-    displayName: devCenterName
+    displayName: '${projectName}-devCenter'
     networkSettings: {
       microsoftHostedNetworkEnableStatus: 'Enabled'
     }
@@ -35,7 +36,7 @@ resource devBoxDefinition 'Microsoft.DevCenter/devcenters/devboxdefinitions@2024
 }
 
 resource devboxProject 'Microsoft.DevCenter/projects@2024-08-01-preview' = {
-  name: 'defaultProject'
+  name: '${projectName}-project'
   location: location
   properties: {
     devCenterId: devCenter.id
@@ -43,14 +44,32 @@ resource devboxProject 'Microsoft.DevCenter/projects@2024-08-01-preview' = {
   }
 }
 
+resource networkConnection 'Microsoft.DevCenter/networkConnections@2024-08-01-preview' = {
+  name: '${projectName}-vnetconnection'
+  location: location
+  properties: {
+    domainJoinType: 'AzureADJoin'
+    networkingResourceGroupName: 'rg-${projectName}-network'
+    subnetId: vmSubnetId
+  }
+}
+
+resource devCenterNetwork 'Microsoft.DevCenter/devcenters/attachednetworks@2024-08-01-preview' = {
+  name: networkConnection.name
+  parent: devCenter
+  properties: {
+    networkConnectionId: networkConnection.id
+  }
+}
+
 resource projectPool 'Microsoft.DevCenter/projects/pools@2024-08-01-preview' = {
-  name: 'defaultPool'
+  name: '${projectName}-pool'
   parent: devboxProject
   location: location
   properties: {
     devBoxDefinitionType: 'Reference'
     devBoxDefinitionName: devBoxDefinition.name
-    networkConnectionName: 'managedNetwork'
+    networkConnectionName: networkConnection.name
     licenseType: 'Windows_Client'
     localAdministrator: 'Enabled'
     stopOnDisconnect: {
@@ -59,10 +78,7 @@ resource projectPool 'Microsoft.DevCenter/projects/pools@2024-08-01-preview' = {
     }
     singleSignOnStatus: 'Disabled'
     displayName: 'defaultPool'
-    virtualNetworkType: 'Managed'
-    managedVirtualNetworkRegions: [
-      'swedencentral'
-    ]
+    virtualNetworkType:'Unmanaged'
   }
 }
 
