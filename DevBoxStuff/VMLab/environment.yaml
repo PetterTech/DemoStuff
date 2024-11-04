@@ -1,0 +1,24 @@
+name: VMLab
+summary: This is a lab environment with a load balancer in front of three VMs.
+description: Deploys a vNet, Bastion, NAT Gateway, a load balancer and three VMS.
+templatePath: main.bicep
+runner: Bicep
+parameters:
+- id: "location"
+  name: "Location"
+  description: "Location to deploy the environment resources"
+  default: "swedencentral"
+  type: "string"
+- id: "projectName"
+  name: "Project Name"
+  description: "The project's name. Used in name generation for resources"
+  type: "string"
+- id: "adminUsername"
+  name: "Local admin username for VMs"
+  description: "Name of the local admin account on your VMs"
+  type: "string"
+- id: "adminPassword"
+  name: "Local admin password for VMs"
+  description: "Password of the local admin account on your VMs"
+  type: "string"
+  default: "aVerySecurePassw0rd!"
