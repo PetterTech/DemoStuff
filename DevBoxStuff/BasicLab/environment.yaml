@@ -3,11 +3,6 @@ summary: This is a lab deployment using Bicep.
 description: Deploys a basic lab setup.
 templatePath: main.bicep
 parameters:
-- id: "name"
-  name: "name"
-  description: "Name of the lab"
-  type: "string"
-  required: true
 - id: "location"
   name: "location"
   description: "Location to deploy the environment resources"
