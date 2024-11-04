@@ -25,7 +25,7 @@ resource devBoxDefinition 'Microsoft.DevCenter/devcenters/devboxdefinitions@2024
   location: location
   properties:{
     imageReference: {
-      id: '${devCenter.id}/images/microsoftwindowsdesktop_windows-ent-cpc_win11-24h2-ent-cpc-m365'
+      id: '${devCenter.id}/galleries/default/images/microsoftwindowsdesktop_windows-ent-cpc_win11-24h2-ent-cpc-m365'
     }
     sku: {
       name: 'general_i_8c32gb256ssd_v2'
@@ -45,31 +45,50 @@ resource devboxProject 'Microsoft.DevCenter/projects@2024-08-01-preview' = {
 
 resource projectPool 'Microsoft.DevCenter/projects/pools@2024-08-01-preview' = {
   name: 'defaultPool'
-  location: location
   parent: devboxProject
+  location: location
   properties: {
-    devBoxDefinition: devBoxDefinition
     devBoxDefinitionType: 'Reference'
     devBoxDefinitionName: devBoxDefinition.name
+    networkConnectionName: 'managedNetwork'
     licenseType: 'Windows_Client'
     localAdministrator: 'Enabled'
     stopOnDisconnect: {
       status: 'Enabled'
       gracePeriodMinutes: 60
     }
+    singleSignOnStatus: 'Disabled'
+    displayName: 'defaultPool'
     virtualNetworkType: 'Managed'
     managedVirtualNetworkRegions: [
-      location
+      'swedencentral'
     ]
-    networkConnectionName: 'managedNetwork'
   }
 }
 
+resource projectPoolSchedule 'Microsoft.DevCenter/projects/pools/schedules@2024-08-01-preview' = {
+  parent: projectPool
+  name: 'default'
+  properties: {
+    type: 'StopDevBox'
+    frequency: 'Daily'
+    time: '19:00'
+    timeZone: 'Europe/Oslo'
+    state: 'Enabled'
+  }
+}
+
+resource devBoxUserRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-05-01-preview' existing = {
+  name: '45d50f46-0b78-4001-a660-4198cbe8cd05'
+  scope: subscription()
+}
+
 resource assignDev 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: 'assignDevDevUserRole'
+  name: guid(resourceGroup().id, devPrincipalId, devBoxUserRoleDefinition.id)
   scope: devboxProject
   properties: {
+    principalType: 'User'
     principalId: devPrincipalId
-    roleDefinitionId: '45d50f46-0b78-4001-a660-4198cbe8cd05'
+    roleDefinitionId: devBoxUserRoleDefinition.id
   }
 }
