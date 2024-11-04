@@ -2,10 +2,14 @@ name: DevBoxLab
 summary: This is a lab environment with a basic setup and DevBox.
 description: Deploys a vNet, Bastion, NAT Gateway and resources for creating Dev Boxes connected to the lab.
 templatePath: main.bicep
+runner: Bicep
 parameters:
 - id: "location"
-  name: "location"
+  name: "Location"
   description: "Location to deploy the environment resources"
   default: "swedencentral"
   type: "string"
-runner: Bicep
+- id: "devPrincipalId"
+  name: "Dev Users principal ID"
+  description: "The principal ID of the user that will be assigned to the Dev Box project as a Dev Box User"
+  type: "string"

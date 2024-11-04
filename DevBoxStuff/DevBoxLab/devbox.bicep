@@ -1,4 +1,5 @@
 param devCenterName string
+param devPrincipalId string
 param location string
 
 resource devCenter 'Microsoft.DevCenter/devcenters@2024-08-01-preview' = {
@@ -60,5 +61,14 @@ resource projectPool 'Microsoft.DevCenter/projects/pools@2024-08-01-preview' = {
     managedVirtualNetworkRegions: [
       location
     ]
+  }
+}
+
+resource assignDev 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: 'assignDevDevUserRole'
+  scope: devboxProject
+  properties: {
+    principalId: devPrincipalId
+    roleDefinitionId: '45d50f46-0b78-4001-a660-4198cbe8cd05'
   }
 }
