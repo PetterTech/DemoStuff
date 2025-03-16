@@ -1,0 +1,15 @@
+$schema: "1.0"
+name: "devbox-customization"
+image: microsoftvisualstudio_visualstudioplustools_vs-2022-ent-general-win11-m365-gen2
+tasks:
+  - name: winget
+    parameters:
+      package: Microsoft.VisualStudioCode
+  - name: winget
+    parameters:
+      package: Vivaldi.Vivaldi
+  - name: git-clone
+    description: Clone this repository into C:\git
+    parameters:
+      repositoryUrl: https://github.com/PetterTech/DemoStuff.git
+      directory: C:\git
