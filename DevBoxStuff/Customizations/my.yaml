@@ -1,0 +1,17 @@
+$schema: "1.0"
+name: "devbox-customization"
+tasks:
+  - name: winget
+    parameters:
+      package: Microsoft.VisualStudioCode
+  - name: winget
+    parameters:
+      package: Vivaldi.Vivaldi
+  - name: winget
+    parameters:
+      package: Discord.Discord
+  - name: git-clone
+    description: Clone this repository into C:\git
+    parameters:
+      repositoryUrl: https://github.com/PetterTech/DemoStuff.git
+      directory: C:\git
