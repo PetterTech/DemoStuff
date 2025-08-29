@@ -13,6 +13,17 @@ tasks:
   - name: winget
     parameters:
       package: notion.notion
+  - name: winget
+    parameters:
+      package: Bambulab.Bambustudio
+  - name: winget
+    parameters:
+      package: Microsoft.Bicep
+  - name: powershell
+    description: Install modules
+    parameters:
+      script: |
+        Install-Module -Name Az.Resources
   - name: git-clone
     description: Clone this repository into C:\git
     parameters:
