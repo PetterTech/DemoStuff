@@ -1,0 +1,13 @@
+$schema: https://raw.githubusercontent.com/PowerShell/DSC/main/schemas/2024/04/config/document.json
+metadata:
+  name: IIS-Configuration
+resources:
+  - name: Use Windows PowerShell resources
+    type: Microsoft.Windows/WindowsPowerShell
+    properties:
+      resources:
+        - name: Web server install
+          type: PSDesiredStateConfiguration/WindowsFeature
+          properties:
+            Name: Web-Server
+            Ensure: Present
