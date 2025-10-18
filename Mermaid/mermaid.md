@@ -5,12 +5,12 @@ Some of these examples do not render properly in GitHub but they do in VS Code w
 
 ## Simple flowchart
 ``` mermaid
-flowchart TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-    D-->E; 
+flowchart TD
+    A-->B
+    A-->C
+    B-->D
+    C-->D
+    D-->E
 ```
 
 ## Simple flowchart, hand drawn style
@@ -19,30 +19,30 @@ flowchart TD;
 config:
   look: handDrawn
 ---
-flowchart TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-    D-->E; 
+flowchart TD
+    A-->B
+    A-->C
+    B-->D
+    C-->D
+    D-->E
 ```
 
 ## Flowchart with lots of connections
 
 ``` mermaid
-flowchart LR;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-    D-->E;
-    E-->A;
-    D-->C;
-    D-->B;
-    E-->B;
-    A-->E;
-    B-->A;
-    B-->E;
+flowchart LR
+    A-->B
+    A-->C
+    B-->D
+    C-->D
+    D-->E
+    E-->A
+    D-->C
+    D-->B
+    E-->B
+    A-->E
+    B-->A
+    B-->E
 ```
 
 ## Flowchart with some colors and shapes and stuff
