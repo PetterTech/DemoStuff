@@ -141,7 +141,7 @@ pie showData
 
 ## Sankey diagram
 ``` mermaid
-sankey-beta
+sankey
 Work-week,Writing,14
 Work-week,Drawing,10
 Work-week,Meetings,16
