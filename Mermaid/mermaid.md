@@ -5,30 +5,44 @@ Some of these examples do not render properly in GitHub but they do in VS Code w
 
 ## Simple flowchart
 ``` mermaid
-flowchart TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-    D-->E; 
+flowchart TD
+    A-->B
+    A-->C
+    B-->D
+    C-->D
+    D-->E
+```
+
+## Simple flowchart, hand drawn style
+``` mermaid
+---
+config:
+  look: handDrawn
+---
+flowchart TD
+    A-->B
+    A-->C
+    B-->D
+    C-->D
+    D-->E
 ```
 
 ## Flowchart with lots of connections
 
 ``` mermaid
-flowchart LR;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-    D-->E;
-    E-->A;
-    D-->C;
-    D-->B;
-    E-->B;
-    A-->E;
-    B-->A;
-    B-->E;
+flowchart LR
+    A-->B
+    A-->C
+    B-->D
+    C-->D
+    D-->E
+    E-->A
+    D-->C
+    D-->B
+    E-->B
+    A-->E
+    B-->A
+    B-->E
 ```
 
 ## Flowchart with some colors and shapes and stuff
@@ -118,8 +132,7 @@ gantt
 ## Pie Chart
 
 ``` mermaid
-pie 
-    showData
+pie showData
     title PetterTech's content
     "Windows 365" : 13
     "Azure" : 28
@@ -128,7 +141,7 @@ pie
 
 ## Sankey diagram
 ``` mermaid
-sankey-beta
+sankey
 Work-week,Writing,14
 Work-week,Drawing,10
 Work-week,Meetings,16
@@ -372,3 +385,18 @@ stateDiagram-v2
     }
 ```
 
+## Architecture diagram
+
+``` mermaid
+architecture-beta
+    group azure(cloud)[Azure]
+
+    service db(database)[MySQL] in azure
+    service disk1(disk)[Storage account A] in azure
+    service disk2(disk)[Storage account B] in azure
+    service server(server)[VM] in azure
+
+    db:L -- R:server
+    disk1:T -- B:server
+    disk2:T -- B:db
+```
