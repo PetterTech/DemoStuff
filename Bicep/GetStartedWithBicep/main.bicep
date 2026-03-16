@@ -39,28 +39,28 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
   name: 'labvm'
   location: 'northeurope'
   properties: {
-     hardwareProfile: {
-       vmSize: 'Standard_D4_v3'
-     }
-     osProfile: {
-       computerName: 'labvm'
-       adminUsername: 'pettertech'
-       adminPassword: 'LongAndStrongPassword!'
-     }
-     storageProfile: {
-       imageReference: {
-         publisher: 'MicrosoftWindowsServer'
-         offer: 'WindowsServer'
-         sku: '2022-Datacenter'
-         version: 'latest'
+    hardwareProfile: {
+      vmSize: 'Standard_D4_v3'
+    }
+    osProfile: {
+      computerName: 'labvm'
+      adminUsername: 'pettertech'
+      adminPassword: 'LongAndStrongPassword!'
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'MicrosoftWindowsServer'
+        offer: 'WindowsServer'
+        sku: '2022-Datacenter'
+        version: 'latest'
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: nic.id
         }
-     }
-     networkProfile: {
-       networkInterfaces: [
-         {
-           id: nic.id
-         }
-       ]
-     }
+      ]
+    }
   }
 }
