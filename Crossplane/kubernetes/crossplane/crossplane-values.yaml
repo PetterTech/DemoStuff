@@ -1,0 +1,3 @@
+# Crossplane Helm values
+# Used with: helm install crossplane crossplane-stable/crossplane -f crossplane-values.yaml
+replicas: 1

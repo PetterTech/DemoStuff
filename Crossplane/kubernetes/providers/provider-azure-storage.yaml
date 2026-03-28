@@ -1,0 +1,10 @@
+# Tested with Crossplane v1.19 (crossplane-stable/crossplane Helm chart)
+# Bump provider version together with provider-family-azure.yaml
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-azure-storage
+spec:
+  package: xpkg.upbound.io/upbound/provider-azure-storage:v1.11.0
+  runtimeConfigRef:
+    name: provider-azure

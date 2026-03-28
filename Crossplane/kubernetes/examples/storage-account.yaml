@@ -1,0 +1,12 @@
+apiVersion: storage.azure.upbound.io/v1beta2
+kind: Account
+metadata:
+  name: <STORAGE_ACCOUNT_NAME>
+spec:
+  forProvider:
+    resourceGroupName: <RESOURCE_GROUP_NAME>
+    location: swedencentral
+    accountTier: Standard
+    accountReplicationType: LRS
+  providerConfigRef:
+    name: default
