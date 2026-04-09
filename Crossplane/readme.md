@@ -57,6 +57,25 @@ cd Crossplane
 .\Deploy.ps1 -StorageAccountName "mystgcrossplane01"
 ```
 
+The script deploys the following end to end:
+
+1. **Azure infrastructure** (via Bicep) — AKS Automatic cluster, managed identity, and federated credential
+2. **Crossplane** (via Helm) — installed into the `crossplane-system` namespace
+3. **Azure provider** — `provider-family-azure` and `provider-azure-storage`, configured with Workload Identity
+
+When the script finishes, Crossplane is fully operational and ready to manage Azure resources. The `-StorageAccountName` value is pre-filled into the example manifest so you can immediately try it out:
+
+```powershell
+kubectl apply -f .generated/examples/storage-account.yaml
+kubectl get account.storage.azure.upbound.io -w
+```
+
+This creates a real Azure Storage Account (Standard LRS, Sweden Central) managed by Crossplane. Once `READY=True` and `SYNCED=True`, the account exists in Azure. Delete the manifest to have Crossplane remove it automatically.
+
+---
+
+**Flags:**
+
 Use `-SkipInfrastructure` to skip Bicep deployment when re-running against an existing cluster.
 
 Use `-Cleanup` to tear down everything (resource group + `.generated/` folder).
