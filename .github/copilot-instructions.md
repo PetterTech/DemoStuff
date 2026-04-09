@@ -2,4 +2,4 @@
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages and PR titles (e.g. `feat:`, `fix:`, `docs:`, `chore:`).
 
-This is a demo repository. Code does not need to be production ready. However, when shortcuts are taken for demo purposes (e.g. hardcoded values, missing error handling, simplified logic), add a comment noting this and warn the user that it is not suitable for production use.
+This is a demo repository. Demo-oriented simplifications are acceptable only when they do not weaken safety or security. Always use safe defaults: never include secrets or PII, never disable or bypass authentication, authorization, validation, or encryption, and never suggest insecure configurations. Limit demo shortcuts to non-safety-critical simplifications (for example, simplified logic or clearly marked hardcoded sample values). When such a shortcut is taken, add a comment noting the shortcut and warn the user that it is not suitable for production use.
