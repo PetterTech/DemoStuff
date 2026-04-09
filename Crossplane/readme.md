@@ -59,6 +59,10 @@ cd Crossplane
 
 Use `-SkipInfrastructure` to skip Bicep deployment when re-running against an existing cluster.
 
+Use `-Cleanup` to tear down everything (resource group + `.generated/` folder).
+
+Optional overrides: `-ResourceGroupName` (default: `rg-crossplane`), `-Location` (default: `swedencentral`).
+
 The script writes generated YAML (with placeholders replaced) to `.generated/` so the originals stay reusable as templates.
 
 ---
@@ -103,9 +107,11 @@ The Kubernetes manifests use angle-bracket placeholders for environment-specific
 | `<SUBSCRIPTION_ID>` | `$subscriptionId` | `provider-config.yaml` |
 | `<TENANT_ID>` | `$tenantId` | `provider-config.yaml` |
 | `<RESOURCE_GROUP_NAME>` | `$rgName` | `storage-account.yaml` |
-| `<STORAGE_ACCOUNT_NAME>` | your unique name | `storage-account.yaml` |
+| `<STORAGE_ACCOUNT_NAME>` | `$storageAccountName` | `storage-account.yaml` |
 
 ```powershell
+$storageAccountName = 'youruniquestoragename'  # Replace with a globally unique name (3-24 chars, lowercase + numbers)
+
 $files = Get-ChildItem -Path kubernetes -Recurse -Filter *.yaml
 
 foreach ($file in $files) {
@@ -114,12 +120,10 @@ foreach ($file in $files) {
         -replace '<SUBSCRIPTION_ID>', $subscriptionId `
         -replace '<TENANT_ID>', $tenantId `
         -replace '<RESOURCE_GROUP_NAME>', $rgName `
-        -replace '<STORAGE_ACCOUNT_NAME>', 'youruniquestoragename' |
+        -replace '<STORAGE_ACCOUNT_NAME>', $storageAccountName |
         Set-Content $file.FullName
 }
 ```
-
-> **Note:** Replace `youruniquestoragename` with a globally unique storage account name (3-24 characters, lowercase letters and numbers only).
 
 ## 3. Connect to the cluster
 
@@ -144,7 +148,8 @@ kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rb
 helm repo add crossplane-stable https://charts.crossplane.io/stable
 helm repo update
 
-helm install crossplane crossplane-stable/crossplane `
+helm upgrade crossplane crossplane-stable/crossplane `
+  --install `
   --namespace crossplane-system `
   --create-namespace `
   --values kubernetes/crossplane/crossplane-values.yaml
@@ -224,7 +229,7 @@ kubectl get account.storage.azure.upbound.io -w
 Once `READY` is `True` and `SYNCED` is `True`, the storage account exists in Azure. You can verify with:
 
 ```powershell
-Get-AzStorageAccount -ResourceGroupName $rgName -Name youruniquestoragename | Select-Object StorageAccountName, ProvisioningState
+Get-AzStorageAccount -ResourceGroupName $rgName -Name $storageAccountName | Select-Object StorageAccountName, ProvisioningState
 ```
 
 > **Note:** The Crossplane identity has Contributor on `rg-crossplane` only, so all resources must be created within that resource group.
@@ -238,6 +243,14 @@ kubectl delete -f kubernetes/examples/storage-account.yaml
 Crossplane will automatically delete the storage account from Azure.
 
 ## Cleanup
+
+Use the `-Cleanup` flag to tear everything down — removes the Azure resource group and the local `.generated/` folder:
+
+```powershell
+.\Deploy.ps1 -Cleanup
+```
+
+Or manually:
 
 ```powershell
 Remove-AzResourceGroup -Name $rgName -Force -AsJob
