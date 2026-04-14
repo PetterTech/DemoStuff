@@ -159,7 +159,7 @@ function Assert-ExitCode {
 
 #region Part 1 - Deploying infrastructure
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 1 of 5 — Deploying infrastructure' -PercentComplete 0 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 1 of 6 — Deploying infrastructure' -PercentComplete 0 -ErrorAction SilentlyContinue
 
 if (-not $SkipInfrastructure) {
     Write-Verbose 'Deploying infrastructure...'
@@ -235,7 +235,7 @@ else {
 
 #region Part 2 - Capturing deployment outputs
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 2 of 5 — Capturing deployment outputs' -PercentComplete 20 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 2 of 6 — Capturing deployment outputs' -PercentComplete 15 -ErrorAction SilentlyContinue
 Write-Verbose 'Capturing deployment outputs...'
 
 try {
@@ -273,7 +273,7 @@ Write-Verbose "Tenant:         $TenantId"
 
 #region Part 3 - Generating YAML manifests
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 3 of 5 — Generating YAML manifests' -PercentComplete 40 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 3 of 6 — Generating YAML manifests' -PercentComplete 30 -ErrorAction SilentlyContinue
 Write-Verbose 'Generating YAML manifests...'
 
 $DeploymentContextFileName = 'deployment-context.json'
@@ -317,7 +317,7 @@ Write-Verbose "Generated manifests in $GeneratedDir"
 
 #region Part 4 - Connecting to cluster
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 4 of 5 — Connecting to cluster' -PercentComplete 60 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 4 of 6 — Connecting to cluster' -PercentComplete 50 -ErrorAction SilentlyContinue
 Write-Verbose 'Connecting to cluster...'
 
 try {
@@ -342,17 +342,48 @@ catch {
 #endregion Part 4 - Connecting to cluster
 
 ########################################################################
-#              Part 5 - Installing ASO                                 #
+#              Part 5 - Installing cert-manager                        #
 ########################################################################
 
-#region Part 5 - Installing ASO
+#region Part 5 - Installing cert-manager
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 5 of 5 — Installing Azure Service Operator' -PercentComplete 80 -ErrorAction SilentlyContinue
-Write-Verbose 'Installing Azure Service Operator...'
+# cert-manager is a hard prerequisite for ASO v2 — ASO uses it for webhook
+# TLS certificates. It must be running before the ASO Helm install.
 
-# Remove the ValidatingAdmissionPolicy binding that may conflict with ASO webhooks on AKS Automatic
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 5 of 6 — Installing cert-manager' -PercentComplete 80 -ErrorAction SilentlyContinue
+Write-Verbose 'Installing cert-manager...'
+
+# Remove the ValidatingAdmissionPolicy binding that blocks webhook installs on AKS Automatic
 kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found 2>$null
 # Intentionally not checking exit code — binding may already be absent
+
+try {
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+    Assert-ExitCode 'kubectl apply cert-manager failed.'
+
+    Write-Verbose 'Waiting for cert-manager deployments to become available...'
+    kubectl wait deployment cert-manager cert-manager-cainjector cert-manager-webhook `
+        --for=condition=Available `
+        --namespace cert-manager `
+        --timeout=300s
+    Assert-ExitCode 'cert-manager deployments did not become available in time.'
+    Write-Verbose 'cert-manager ready.'
+}
+catch {
+    Write-Verbose "cert-manager install failed: $($_.Exception.Message)"
+    throw
+}
+
+#endregion Part 5 - Installing cert-manager
+
+########################################################################
+#              Part 6 - Installing ASO                                 #
+########################################################################
+
+#region Part 6 - Installing ASO
+
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 6 of 6 — Installing Azure Service Operator' -PercentComplete 90 -ErrorAction SilentlyContinue
+Write-Verbose 'Installing Azure Service Operator...'
 
 try {
     Write-Verbose 'Adding ASO Helm repo...'
@@ -371,7 +402,7 @@ catch {
 try {
     Write-Verbose 'Installing ASO via Helm...'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing ASO chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
-    helm upgrade aso asohelmchart/aso-helm-chart `
+    helm upgrade aso asohelmchart/azure-service-operator `
         --install `
         --namespace azureserviceoperator-system `
         --create-namespace `
@@ -388,7 +419,7 @@ catch {
 
 Write-Progress -Id 0 -Activity 'ASO deployment' -Completed -ErrorAction SilentlyContinue
 
-#endregion Part 5 - Installing ASO
+#endregion Part 6 - Installing ASO
 
 Write-Verbose "All done. Elapsed time: $($ElapsedTime.Elapsed.ToString())."
 
