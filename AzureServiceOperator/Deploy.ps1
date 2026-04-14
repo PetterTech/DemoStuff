@@ -398,6 +398,7 @@ try {
     }
 
     $NsExists = kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null
+    Assert-ExitCode 'kubectl get namespace azureserviceoperator-system failed.'
     if ($NsExists) {
         Write-Verbose 'Removing azureserviceoperator-system namespace...'
         kubectl delete namespace azureserviceoperator-system --ignore-not-found
@@ -406,12 +407,18 @@ try {
         # Poll until the namespace is fully gone — kubectl wait --for=delete can return
         # while the namespace is still in Terminating state, which causes Gatekeeper to
         # still see the old services and block the new install.
+        # $LASTEXITCODE is checked after each kubectl call so connectivity/auth failures
+        # are not silently misread as "namespace gone".
         $Deadline = (Get-Date).AddSeconds(180)
-        while ((kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null) -and (Get-Date) -lt $Deadline) {
-            Write-Verbose 'Waiting for namespace azureserviceoperator-system to finish terminating...'
-            Start-Sleep -Seconds 5
-        }
-        if (kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null) {
+        do {
+            $NsStillExists = kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null
+            Assert-ExitCode 'kubectl get namespace azureserviceoperator-system failed during termination wait.'
+            if ($NsStillExists) {
+                Write-Verbose 'Waiting for namespace azureserviceoperator-system to finish terminating...'
+                Start-Sleep -Seconds 5
+            }
+        } while ($NsStillExists -and (Get-Date) -lt $Deadline)
+        if ($NsStillExists) {
             throw 'Namespace azureserviceoperator-system did not terminate within 180 seconds.'
         }
         Write-Verbose 'Namespace fully removed.'
