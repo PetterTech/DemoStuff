@@ -459,17 +459,29 @@ try {
     # select 'control-plane: controller-manager', which triggers this policy on
     # AKS Automatic. The constraint name includes a hash suffix, so discover it dynamically.
     # AKS will recreate the constraint automatically on its next reconciliation cycle.
+    # stderr is merged into the output (2>&1) so connectivity/auth failures are captured
+    # and can be distinguished from a benign "CRD not registered on this cluster" result.
     Write-Verbose 'Checking for unique-service-selector Gatekeeper constraints...'
-    $UniqueServiceConstraintRaw = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>$null
-    $UniqueServiceConstraint = if ($null -ne $UniqueServiceConstraintRaw) { $UniqueServiceConstraintRaw.Trim() } else { $null }
-    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($UniqueServiceConstraint)) {
+    $UniqueServiceConstraintRaw = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>&1
+    $UniqueServiceConstraint = ($UniqueServiceConstraintRaw | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        Write-Verbose "kubectl get k8sazurev1uniqueserviceselector returned exit code $LASTEXITCODE — checking error type..."
+        if ($UniqueServiceConstraint -like "*the server doesn't have a resource type*") {
+            # The CRD is not registered on this cluster (non-AKS Automatic) — safe to skip.
+            Write-Verbose 'k8sazurev1uniqueserviceselector CRD not present on this cluster — skipping constraint removal.'
+        }
+        else {
+            throw "kubectl get k8sazurev1uniqueserviceselector failed: $UniqueServiceConstraint"
+        }
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($UniqueServiceConstraint)) {
         Write-Verbose "Removing Gatekeeper constraint '$UniqueServiceConstraint' before Helm install..."
         kubectl delete k8sazurev1uniqueserviceselector $UniqueServiceConstraint --ignore-not-found 2>$null
         Assert-ExitCode "Failed to remove Gatekeeper constraint '$UniqueServiceConstraint'."
         Write-Verbose "Removed Gatekeeper constraint '$UniqueServiceConstraint' or it no longer existed."
     }
     else {
-        Write-Verbose 'No valid unique-service-selector constraint found — continuing.'
+        Write-Verbose 'No unique-service-selector constraints found — continuing.'
     }
 
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing ASO chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
