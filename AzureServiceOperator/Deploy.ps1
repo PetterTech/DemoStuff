@@ -386,6 +386,23 @@ Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 6 of 6 — Install
 Write-Verbose 'Installing Azure Service Operator...'
 
 try {
+    # Delete the namespace if it already exists to avoid AKS Gatekeeper policy violations
+    # caused by stale resources from a previous failed install (e.g. duplicate service selectors).
+    $NsExists = kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null
+    if ($NsExists) {
+        Write-Verbose 'Existing azureserviceoperator-system namespace found — removing to ensure clean install...'
+        kubectl delete namespace azureserviceoperator-system
+        Assert-ExitCode 'kubectl delete namespace azureserviceoperator-system failed.'
+        kubectl wait --for=delete namespace/azureserviceoperator-system --timeout=120s 2>$null
+        Write-Verbose 'Namespace removed.'
+    }
+}
+catch {
+    Write-Verbose "Failed to clean up existing ASO namespace: $($_.Exception.Message)"
+    throw
+}
+
+try {
     Write-Verbose 'Adding ASO Helm repo...'
     helm repo add asohelmchart https://raw.githubusercontent.com/Azure/azure-service-operator/main/v2/charts --force-update | Out-Null
     Assert-ExitCode 'helm repo add failed.'
