@@ -477,7 +477,8 @@ Write-Verbose "All done. Elapsed time: $($ElapsedTime.Elapsed.ToString())."
 
 Write-Host ''
 Write-Host 'Azure Service Operator is ready. To test with a Storage Account:' -ForegroundColor Green
-Write-Host "  kubectl apply -f $GeneratedDir/examples/storage-account.yaml"
+$ExampleFile = Join-Path $GeneratedDir 'examples' 'storage-account.yaml'
+Write-Host "  kubectl apply -f $ExampleFile"
 Write-Host '  kubectl get storageaccount -w'
 Write-Host ''
 Write-Host 'To clean up everything:'
