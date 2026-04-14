@@ -1,0 +1,8 @@
+# Helm values for Azure Service Operator v2
+# Tested with ASO v2 (asohelmchart/aso-helm-chart)
+# Workload Identity authentication — no secrets stored in the cluster
+
+azureTenantID: "<TENANT_ID>"
+azureSubscriptionID: "<SUBSCRIPTION_ID>"
+azureClientID: "<ASO_IDENTITY_CLIENT_ID>"
+useWorkloadIdentityAuth: true
