@@ -9,3 +9,9 @@ useWorkloadIdentityAuth: true
 # Install only Storage CRDs. Use '*' for all, but avoid it on small clusters
 # as it installs hundreds of CRDs. Extend this pattern to add more services.
 crdPattern: "storage.azure.com/*"
+
+# Disable the metrics service. AKS Automatic's Gatekeeper policy blocks two
+# services in the same namespace sharing a selector, and both the webhook
+# service and the metrics service select 'control-plane: controller-manager'.
+metrics:
+  enable: false
