@@ -392,7 +392,8 @@ try {
     $HelmStatus = helm status aso --namespace azureserviceoperator-system 2>$null
     if ($LASTEXITCODE -eq 0) {
         Write-Verbose 'Existing ASO Helm release found — uninstalling...'
-        helm uninstall aso --namespace azureserviceoperator-system --wait 2>$null
+        helm uninstall aso --namespace azureserviceoperator-system --wait
+        Assert-ExitCode 'helm uninstall aso failed.'
         Write-Verbose 'Helm release uninstalled.'
     }
 
@@ -438,18 +439,22 @@ catch {
 try {
     Write-Verbose 'Installing ASO via Helm...'
 
-    # Temporarily remove the Gatekeeper constraint that blocks two services with the same
-    # selector in one namespace. ASO's webhook and metrics services both select
-    # 'control-plane: controller-manager', which triggers this policy on AKS Automatic.
-    # AKS will recreate the constraint automatically on its next reconciliation cycle.
-    Write-Verbose 'Removing unique-service-selector Gatekeeper constraint for install...'
-    $UniqueServiceConstraint = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>$null
-    if ($LASTEXITCODE -eq 0 -and $UniqueServiceConstraint) {
+    # Temporarily remove the AKS-managed Gatekeeper constraint that blocks two services
+    # with the same selector in one namespace. ASO's webhook and metrics services both
+    # select 'control-plane: controller-manager', which triggers this policy on
+    # AKS Automatic. To avoid deleting a user-managed policy, only target the known
+    # AKS-managed constraint by its exact name.
+    $UniqueServiceConstraint = 'azurepolicy-k8sazurev1uniqueserviceselector'
+    Write-Verbose "Checking for AKS-managed unique-service-selector Gatekeeper constraint '$UniqueServiceConstraint'..."
+    kubectl get k8sazurev1uniqueserviceselector $UniqueServiceConstraint 1>$null 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Verbose "Removing AKS-managed Gatekeeper constraint '$UniqueServiceConstraint' for install..."
         kubectl delete k8sazurev1uniqueserviceselector $UniqueServiceConstraint --ignore-not-found 2>$null
+        Assert-ExitCode "Failed to remove Gatekeeper constraint '$UniqueServiceConstraint'."
         Write-Verbose "Removed Gatekeeper constraint '$UniqueServiceConstraint'."
     }
     else {
-        Write-Verbose 'No unique-service-selector constraint found — continuing.'
+        Write-Verbose "AKS-managed unique-service-selector Gatekeeper constraint '$UniqueServiceConstraint' not found — continuing."
     }
 
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing ASO chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
