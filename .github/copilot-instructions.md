@@ -42,7 +42,7 @@ Use `########` hash-line dividers with centered titles and part numbering (e.g. 
 
 - Wrap each critical operation in its own `try`/`catch` — do not group multiple operations in a single block. Each `try`/`catch` should target one logical action (e.g. one cmdlet call, one external tool invocation) so the `catch` message pinpoints exactly what failed
 - Inside `catch` blocks, use `Write-Verbose` describing the failure context, then `throw` to re-throw the original exception. Do not use `$error[0]` inside `catch` — the caught exception is already in `$_`
-- For modern scripts (Graph API, etc.), prefer `Write-Error` with `exit`
+- Prefer `throw` for errors in functions, modules, and dot-sourced scripts so callers can handle failures. Restrict `Write-Error` with `exit` to top-level script entrypoints only when an explicit process exit code is required
 - Use `-ErrorAction Stop` on critical cmdlets so they produce terminating errors caught by `try`/`catch`
 - Use `-ErrorAction SilentlyContinue` for non-blocking operations like `Write-Progress`
 
