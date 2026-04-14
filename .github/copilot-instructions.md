@@ -76,7 +76,7 @@ Use `Select-Object` with `@{Name="PropertyName";Expression={...}}` hashtable syn
 
 ## String Interpolation
 
-Use `$()` subexpressions for property access and method calls inside double-quoted strings: `"Connected to $($Server)"`.
+Use `$()` subexpressions for property access and method calls inside double-quoted strings: `"Connected to $($Server.Name)"`.
 
 ## Pipeline and Filtering
 
@@ -86,7 +86,7 @@ Use `$()` subexpressions for property access and method calls inside double-quot
 
 ## Credential Handling
 
-Prefer managed identities for Azure automation. Use encrypted password files (`ConvertTo-SecureString`) for service accounts. Avoid plaintext passwords in production scripts.
+Prefer managed identities for Azure automation. Otherwise, prefer a proper secret store such as Azure Key Vault or PowerShell SecretManagement. If a persisted credential is unavoidable, document the exact pattern (`ConvertTo-SecureString` to create a `SecureString`, then `ConvertFrom-SecureString` or `Export-Clixml` to persist it) and note that the default protection is typically Windows/user-scoped and not portable across users or machines. Avoid plaintext passwords in production scripts.
 
 ## Rounding and Math
 
