@@ -276,10 +276,21 @@ Write-Verbose "Tenant:         $TenantId"
 Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 3 of 5 — Generating YAML manifests' -PercentComplete 40 -ErrorAction SilentlyContinue
 Write-Verbose 'Generating YAML manifests...'
 
+$DeploymentContextFileName = 'deployment-context.json'
+$DeploymentContextPath = Join-Path $GeneratedDir $DeploymentContextFileName
+$DeploymentContextContent = $null
+
+if (Test-Path $DeploymentContextPath) {
+    $DeploymentContextContent = Get-Content -Path $DeploymentContextPath -Raw
+}
+
 if (Test-Path $GeneratedDir) { Remove-Item $GeneratedDir -Recurse -Force }
 
 Copy-Item -Path (Join-Path $ScriptRoot 'kubernetes') -Destination $GeneratedDir -Recurse
 
+if ($null -ne $DeploymentContextContent) {
+    Set-Content -Path (Join-Path $GeneratedDir $DeploymentContextFileName) -Value $DeploymentContextContent
+}
 $YamlFiles = Get-ChildItem -Path $GeneratedDir -Recurse -Filter *.yaml
 
 $Progress = 0
