@@ -72,7 +72,7 @@ Create custom objects with `[PSCustomObject]@{ Name = Value }` syntax. Avoid the
 
 ## Calculated Properties
 
-Use `Select-Object` with `@{Name="";Expression={}}` hashtable syntax for computed properties.
+Use `Select-Object` with `@{Name="PropertyName";Expression={...}}` hashtable syntax for computed properties.
 
 ## String Interpolation
 
