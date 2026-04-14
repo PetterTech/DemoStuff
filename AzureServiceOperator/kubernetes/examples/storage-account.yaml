@@ -1,0 +1,13 @@
+apiVersion: storage.azure.com/v1api20230101
+kind: StorageAccount
+metadata:
+  name: <STORAGE_ACCOUNT_NAME>
+  namespace: default
+spec:
+  location: swedencentral
+  owner:
+    armId: /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>
+  kind: StorageV2
+  sku:
+    name: Standard_LRS
+  accessTier: Hot
