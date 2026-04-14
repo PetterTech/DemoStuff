@@ -13,7 +13,7 @@ Follow these conventions when generating or modifying PowerShell code.
 Scripts follow this top-down layout:
 
 1. `[CmdletBinding()]` (if applicable)
-2. Comment-based help (`.Synopsis`, `.Description`, `.Link`)
+2. Comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.LINK`)
 3. `Param` block (if applicable, with `HelpMessage` on mandatory parameters, `ValidateSet`/`ValidateScript` for input validation)
 4. Variables section — all configuration variables grouped by category with comment headers (e.g. `#Mail related variables`, `#vCenter related`), indented under their category
 5. `DO NOT EDIT BELOW THIS LINE` — a hash-line barrier separating config from implementation
@@ -26,7 +26,7 @@ Use `Write-Verbose` liberally: include a message before attempting an action and
 
 ## Comment-Based Help
 
-Use `<# #>` block comments with `.Synopsis`, `.Description`, and `.Link` as minimum fields. For functions, add `.Parameter` and `.Example` entries. Place help at the top of scripts and at the beginning of function bodies (immediately after the opening brace).
+Use `<#` ... `#>` block comments with `.SYNOPSIS`, `.DESCRIPTION`, and `.LINK` as minimum fields. For functions, add `.PARAMETER` and `.EXAMPLE` entries. Place help at the top of scripts and at the beginning of function bodies (immediately after the opening brace).
 
 ## Section Headers
 
