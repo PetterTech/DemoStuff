@@ -386,15 +386,34 @@ Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 6 of 6 — Install
 Write-Verbose 'Installing Azure Service Operator...'
 
 try {
-    # Delete the namespace if it already exists to avoid AKS Gatekeeper policy violations
-    # caused by stale resources from a previous failed install (e.g. duplicate service selectors).
+    # Uninstall existing Helm release first (cleanest way to remove all Helm-managed resources),
+    # then delete the namespace and poll until it is fully gone — not just "Terminating".
+    # This prevents AKS Gatekeeper from seeing stale services with the same selector.
+    $HelmStatus = helm status aso --namespace azureserviceoperator-system 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Verbose 'Existing ASO Helm release found — uninstalling...'
+        helm uninstall aso --namespace azureserviceoperator-system --wait 2>$null
+        Write-Verbose 'Helm release uninstalled.'
+    }
+
     $NsExists = kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null
     if ($NsExists) {
-        Write-Verbose 'Existing azureserviceoperator-system namespace found — removing to ensure clean install...'
-        kubectl delete namespace azureserviceoperator-system
+        Write-Verbose 'Removing azureserviceoperator-system namespace...'
+        kubectl delete namespace azureserviceoperator-system --ignore-not-found
         Assert-ExitCode 'kubectl delete namespace azureserviceoperator-system failed.'
-        kubectl wait --for=delete namespace/azureserviceoperator-system --timeout=120s 2>$null
-        Write-Verbose 'Namespace removed.'
+
+        # Poll until the namespace is fully gone — kubectl wait --for=delete can return
+        # while the namespace is still in Terminating state, which causes Gatekeeper to
+        # still see the old services and block the new install.
+        $Deadline = (Get-Date).AddSeconds(180)
+        while ((kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null) -and (Get-Date) -lt $Deadline) {
+            Write-Verbose 'Waiting for namespace azureserviceoperator-system to finish terminating...'
+            Start-Sleep -Seconds 5
+        }
+        if (kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null) {
+            throw 'Namespace azureserviceoperator-system did not terminate within 180 seconds.'
+        }
+        Write-Verbose 'Namespace fully removed.'
     }
 }
 catch {
@@ -424,6 +443,7 @@ try {
         --namespace azureserviceoperator-system `
         --create-namespace `
         --values "$GeneratedDir/aso-values.yaml" `
+        --cleanup-on-fail `
         --wait
     Assert-ExitCode 'helm upgrade/install aso failed.'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Completed -ErrorAction SilentlyContinue
