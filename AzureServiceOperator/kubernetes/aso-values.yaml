@@ -1,8 +1,12 @@
 # Helm values for Azure Service Operator v2
-# Tested with ASO v2 (asohelmchart/aso-helm-chart)
+# Tested with ASO v2 (asohelmchart/azure-service-operator)
 # Workload Identity authentication — no secrets stored in the cluster
 
 azureTenantID: "<TENANT_ID>"
 azureSubscriptionID: "<SUBSCRIPTION_ID>"
 azureClientID: "<ASO_IDENTITY_CLIENT_ID>"
 useWorkloadIdentityAuth: true
+
+# Install only the CRDs needed for this demo. Extend this list as needed.
+# Use crdPattern: "*" to install all CRDs (not recommended on small clusters).
+crdPattern: storage.azure.com/*

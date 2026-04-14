@@ -28,6 +28,7 @@ AzureServiceOperator/
 - Contributor role assignment on the resource group
 
 **Kubernetes (Helm + YAML manifests):**
+- cert-manager (required by ASO for webhook certificate management)
 - Azure Service Operator v2 (via Helm), configured with Azure Workload Identity
 
 ## Prerequisites
@@ -49,7 +50,8 @@ cd AzureServiceOperator
 The script deploys the following end to end:
 
 1. **Azure infrastructure** (via Bicep) — AKS Automatic cluster, managed identity, and federated credential
-2. **Azure Service Operator** (via Helm) — installed into the `azureserviceoperator-system` namespace, configured with Workload Identity
+2. **cert-manager** — installed into the `cert-manager` namespace; required by ASO for webhook certificates
+3. **Azure Service Operator** (via Helm) — installed into the `azureserviceoperator-system` namespace, configured with Workload Identity
 
 When the script finishes, ASO is fully operational and ready to manage Azure resources. The `-StorageAccountName` value is pre-filled into the example manifest so you can immediately try it out:
 
@@ -141,15 +143,30 @@ kubelogin convert-kubeconfig -l azurecli
 
 > **Note:** AKS Automatic uses Entra ID authentication. The `kubelogin convert-kubeconfig -l azurecli` command configures kubectl to reuse your existing `az login` session, which avoids Conditional Access issues with interactive browser sign-in.
 
-## 4. Install Azure Service Operator
+## 4. Install cert-manager
 
-ASO is installed as a single Helm chart. The Workload Identity configuration is passed via the values file.
+ASO requires cert-manager for its webhook certificates. Install it before ASO:
+
+```powershell
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=300s
+```
+
+> **Note:** If the apply fails on AKS Automatic, first remove the built-in `ValidatingAdmissionPolicyBinding` and retry:
+> ```powershell
+> kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found
+> ```
+> AKS will automatically recreate this binding after a reconciliation cycle.
+
+## 5. Install Azure Service Operator
+
+ASO is installed as a single Helm chart. The Workload Identity configuration and CRD selection are passed via the values file.
 
 ```powershell
 helm repo add asohelmchart https://raw.githubusercontent.com/Azure/azure-service-operator/main/v2/charts
 helm repo update
 
-helm upgrade aso asohelmchart/aso-helm-chart `
+helm upgrade aso asohelmchart/azure-service-operator `
   --install `
   --namespace azureserviceoperator-system `
   --create-namespace `
@@ -157,19 +174,9 @@ helm upgrade aso asohelmchart/aso-helm-chart `
   --wait
 ```
 
-> **Note:** If the install fails on AKS Automatic with a webhook or RBAC error, try removing the built-in `ValidatingAdmissionPolicyBinding` that blocks certain cluster-level operations before retrying:
-> ```powershell
-> kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found
-> ```
-> AKS will automatically recreate this binding after a reconciliation cycle.
+> **Note:** The `crdPattern` in `aso-values.yaml` controls which Azure CRDs are installed. The default (`storage.azure.com/*`) covers the Storage Account example. Extend it as needed (e.g. add `containerservice.azure.com/*`) or use `crdPattern: "*"` to install all CRDs (not recommended on small clusters).
 
-Wait for ASO pods to be ready:
-
-```powershell
-kubectl get pods -n azureserviceoperator-system -w
-```
-
-## 5. Verify
+## 6. Verify
 
 ```powershell
 # ASO manager pod should be Running
@@ -179,7 +186,7 @@ kubectl get pods -n azureserviceoperator-system
 kubectl logs -n azureserviceoperator-system -l control-plane=controller-manager --tail=20
 ```
 
-## 6. Try it out — create a Storage Account
+## 7. Try it out — create a Storage Account
 
 ```powershell
 kubectl apply -f kubernetes/examples/storage-account.yaml
