@@ -399,7 +399,7 @@ try {
     # This prevents AKS Gatekeeper from seeing stale services with the same selector.
     $HelmStatus = helm status aso --namespace azureserviceoperator-system 2>$null
     if ($LASTEXITCODE -eq 0) {
-        Write-Verbose 'Existing ASO Helm release found — uninstalling...'
+        Write-Verbose "Existing ASO Helm release found — uninstalling. Helm status output: $($HelmStatus -join [Environment]::NewLine)"
         helm uninstall aso --namespace azureserviceoperator-system --wait
         Assert-ExitCode 'helm uninstall aso failed.'
         Write-Verbose 'Helm release uninstalled.'
@@ -460,15 +460,16 @@ try {
     # AKS Automatic. The constraint name includes a hash suffix, so discover it dynamically.
     # AKS will recreate the constraint automatically on its next reconciliation cycle.
     Write-Verbose 'Checking for unique-service-selector Gatekeeper constraints...'
-    $UniqueServiceConstraint = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>$null
-    if ($LASTEXITCODE -eq 0 -and $UniqueServiceConstraint) {
+    $UniqueServiceConstraintRaw = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>$null
+    $UniqueServiceConstraint = if ($null -ne $UniqueServiceConstraintRaw) { $UniqueServiceConstraintRaw.Trim() } else { $null }
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($UniqueServiceConstraint)) {
         Write-Verbose "Removing Gatekeeper constraint '$UniqueServiceConstraint' before Helm install..."
-        kubectl delete k8sazurev1uniqueserviceselector $UniqueServiceConstraint 2>$null
+        kubectl delete k8sazurev1uniqueserviceselector $UniqueServiceConstraint --ignore-not-found 2>$null
         Assert-ExitCode "Failed to remove Gatekeeper constraint '$UniqueServiceConstraint'."
-        Write-Verbose "Removed Gatekeeper constraint '$UniqueServiceConstraint'."
+        Write-Verbose "Removed Gatekeeper constraint '$UniqueServiceConstraint' or it no longer existed."
     }
     else {
-        Write-Verbose 'No unique-service-selector constraint found — continuing.'
+        Write-Verbose 'No valid unique-service-selector constraint found — continuing.'
     }
 
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing ASO chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
