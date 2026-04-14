@@ -49,7 +49,7 @@ Use `########` hash-line dividers with centered titles and part numbering (e.g. 
 ## Progress Tracking
 
 - Use `Write-Progress` with `-Id` for hierarchical progress and `-ParentId` for nested loops
-- Calculate percentage as `($progress/$total.count*100)` with a `$progress` counter incremented at the end of each iteration
+- Calculate percentage as `($Progress / $Total.Count * 100)` with a `$Progress` counter incremented at the end of each iteration
 - Always add `-ErrorAction SilentlyContinue` to `Write-Progress` calls
 - Complete progress bars with `-Completed` when done
 
