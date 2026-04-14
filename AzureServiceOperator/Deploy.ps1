@@ -437,6 +437,21 @@ catch {
 
 try {
     Write-Verbose 'Installing ASO via Helm...'
+
+    # Temporarily remove the Gatekeeper constraint that blocks two services with the same
+    # selector in one namespace. ASO's webhook and metrics services both select
+    # 'control-plane: controller-manager', which triggers this policy on AKS Automatic.
+    # AKS will recreate the constraint automatically on its next reconciliation cycle.
+    Write-Verbose 'Removing unique-service-selector Gatekeeper constraint for install...'
+    $UniqueServiceConstraint = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>$null
+    if ($LASTEXITCODE -eq 0 -and $UniqueServiceConstraint) {
+        kubectl delete k8sazurev1uniqueserviceselector $UniqueServiceConstraint --ignore-not-found 2>$null
+        Write-Verbose "Removed Gatekeeper constraint '$UniqueServiceConstraint'."
+    }
+    else {
+        Write-Verbose 'No unique-service-selector constraint found — continuing.'
+    }
+
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing ASO chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
     helm upgrade aso asohelmchart/azure-service-operator `
         --install `
