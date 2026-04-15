@@ -125,8 +125,27 @@ if ($Cleanup) {
     }
 
     # Offer to remove cached model
-    $CacheOutput = foundry cache list 2>&1 | Out-String
-    if ($CacheOutput -match $Model) {
+    try {
+        $TempCacheOut = [System.IO.Path]::GetTempFileName()
+        $TempCacheErr = [System.IO.Path]::GetTempFileName()
+        $CacheProc = Start-Process -FilePath "foundry" -ArgumentList "cache","list" -NoNewWindow -PassThru -RedirectStandardOutput $TempCacheOut -RedirectStandardError $TempCacheErr
+        $CacheExited = $CacheProc.WaitForExit(10000)
+        if (-not $CacheExited) {
+            $CacheProc.Kill()
+            Write-Verbose "foundry cache list timed out."
+            $CacheOutput = ""
+        }
+        else {
+            $CacheOutput = Get-Content $TempCacheOut -Raw -ErrorAction SilentlyContinue
+        }
+        Remove-Item $TempCacheOut, $TempCacheErr -Force -ErrorAction SilentlyContinue
+    }
+    catch {
+        Write-Verbose "Failed to query model cache: $_"
+        $CacheOutput = ""
+    }
+
+    if ($CacheOutput -and $CacheOutput -match $Model) {
         $RemoveModel = Read-Host "Remove cached model '$Model' from disk? (Y/N)"
         if ($RemoveModel -eq 'Y' -or $RemoveModel -eq 'y') {
             try {
@@ -142,6 +161,9 @@ if ($Cleanup) {
         else {
             Write-Host "  Kept model '$Model' in cache." -ForegroundColor DarkGray
         }
+    }
+    else {
+        Write-Host "  No cached model '$Model' found." -ForegroundColor DarkGray
     }
 
     Write-Host ""
