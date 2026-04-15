@@ -58,7 +58,7 @@ Param(
 #region Variables
 
 $ContainerName = "open-webui-foundry"
-$OpenWebUIImage = "ghcr.io/open-webui/open-webui:main"
+$OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.3.32"
 
 #endregion Variables
 
@@ -145,7 +145,8 @@ if ($Cleanup) {
         $CacheOutput = ""
     }
 
-    if ($CacheOutput -and $CacheOutput -match $Model) {
+    $EscapedModel = [regex]::Escape($Model)
+    if ($CacheOutput -and $CacheOutput -match $EscapedModel) {
         $RemoveModel = Read-Host "Remove cached model '$Model' from disk? (Y/N)"
         if ($RemoveModel -eq 'Y' -or $RemoveModel -eq 'y') {
             try {
@@ -430,10 +431,13 @@ catch {
 
 # Check if the model is already cached locally
 $CacheOutput = foundry cache list 2>&1 | Out-String
-if ($CacheOutput -match $Model) {
+Write-Verbose "Checking whether model '$Model' is already present in the local cache..."
+if ($CacheOutput | Select-String -SimpleMatch -Pattern $Model -Quiet) {
+    Write-Verbose "Model '$Model' was found in the local cache."
     Write-Host "Model '$Model' is already downloaded." -ForegroundColor Green
 }
 else {
+    Write-Verbose "Model '$Model' was not found in the local cache."
     Write-Host "Downloading model '$Model'..." -ForegroundColor Cyan
     Write-Host "  (This may take several minutes on first run depending on your connection)" -ForegroundColor DarkGray
     Write-Host "  Tip: Run 'foundry cache list' in another terminal to check download status." -ForegroundColor DarkGray
