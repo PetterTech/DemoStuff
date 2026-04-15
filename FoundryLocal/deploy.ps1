@@ -489,9 +489,10 @@ $ServiceCommands = @("start", "restart")
 foreach ($ServiceAction in $ServiceCommands) {
     Write-Verbose "Attempting 'foundry service $ServiceAction'..."
     $TempOut = [System.IO.Path]::GetTempFileName()
+    $TempErr = [System.IO.Path]::GetTempFileName()
     try {
         $Proc = Start-Process -FilePath "foundry" -ArgumentList "service", $ServiceAction `
-            -RedirectStandardOutput $TempOut -RedirectStandardError ([System.IO.Path]::GetTempFileName()) `
+            -RedirectStandardOutput $TempOut -RedirectStandardError $TempErr `
             -PassThru -NoNewWindow
         # Wait up to 3 minutes for the service to start
         $ServiceTimeout = 180
@@ -522,6 +523,7 @@ foreach ($ServiceAction in $ServiceCommands) {
     }
     finally {
         Remove-Item $TempOut -ErrorAction SilentlyContinue
+        Remove-Item $TempErr -ErrorAction SilentlyContinue
     }
 }
 
