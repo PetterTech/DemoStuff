@@ -92,21 +92,10 @@ foundry service ps
 
 ## Cleanup
 
-Stop and remove everything:
+Use the `-Cleanup` switch to stop and remove everything:
 
 ```powershell
-# Stop Open WebUI
-docker rm -f open-webui-foundry
-
-# Remove the persistent volume (deletes chat history)
-docker volume rm open-webui-foundry
-
-# Stop Foundry Local service
-foundry service stop
-
-# (Optional) Remove cached models
-foundry cache list
-foundry cache remove <model-id>
+.\deploy.ps1 -Cleanup
 ```
 
 ## How It Works

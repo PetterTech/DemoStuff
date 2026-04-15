@@ -75,42 +75,49 @@ $ElapsedTime = [System.Diagnostics.Stopwatch]::StartNew()
 if ($Cleanup) {
     Write-Host "Cleaning up Foundry Local demo environment..." -ForegroundColor Cyan
 
-    # Stop and remove Open WebUI container
-    $ExistingContainer = docker ps -a --filter "name=$ContainerName" --format "{{.ID}}" 2>$null
-    if ($ExistingContainer) {
-        try {
-            Write-Verbose "Stopping and removing Open WebUI container '$ContainerName'..."
-            docker rm -f $ContainerName | Out-Null
-            Write-Host "  Removed Docker container '$ContainerName'." -ForegroundColor Green
-        }
-        catch {
-            Write-Verbose "Failed to remove container: $_"
-            Write-Host "  Could not remove container '$ContainerName'." -ForegroundColor Yellow
-        }
-    }
-    else {
-        Write-Verbose "No container named '$ContainerName' found."
-        Write-Host "  No Open WebUI container found (already removed)." -ForegroundColor DarkGray
-    }
-
-    # Remove Open WebUI Docker volume
-    $ExistingVolume = docker volume ls --filter "name=open-webui-foundry" --format "{{.Name}}" 2>$null
-    if ($ExistingVolume) {
-        $RemoveVolume = Read-Host "Remove Open WebUI data volume (deletes chat history)? (Y/N)"
-        if ($RemoveVolume -eq 'Y' -or $RemoveVolume -eq 'y') {
+    # Stop and remove Open WebUI container and volume (only if Docker is available)
+    $DockerCmdCleanup = Get-Command docker -ErrorAction SilentlyContinue
+    if ($DockerCmdCleanup) {
+        $ExistingContainer = docker ps -a --filter "name=$ContainerName" --format "{{.ID}}" 2>$null
+        if ($ExistingContainer) {
             try {
-                Write-Verbose "Removing Docker volume 'open-webui-foundry'..."
-                docker volume rm open-webui-foundry | Out-Null
-                Write-Host "  Removed Docker volume 'open-webui-foundry'." -ForegroundColor Green
+                Write-Verbose "Stopping and removing Open WebUI container '$ContainerName'..."
+                docker rm -f $ContainerName | Out-Null
+                Write-Host "  Removed Docker container '$ContainerName'." -ForegroundColor Green
             }
             catch {
-                Write-Verbose "Failed to remove volume: $_"
-                Write-Host "  Could not remove volume. It may still be in use." -ForegroundColor Yellow
+                Write-Verbose "Failed to remove container: $_"
+                Write-Host "  Could not remove container '$ContainerName'." -ForegroundColor Yellow
             }
         }
         else {
-            Write-Host "  Kept Docker volume (chat history preserved)." -ForegroundColor DarkGray
+            Write-Verbose "No container named '$ContainerName' found."
+            Write-Host "  No Open WebUI container found (already removed)." -ForegroundColor DarkGray
         }
+
+        # Remove Open WebUI Docker volume
+        $ExistingVolume = docker volume ls --filter "name=open-webui-foundry" --format "{{.Name}}" 2>$null
+        if ($ExistingVolume) {
+            $RemoveVolume = Read-Host "Remove Open WebUI data volume (deletes chat history)? (Y/N)"
+            if ($RemoveVolume -eq 'Y' -or $RemoveVolume -eq 'y') {
+                try {
+                    Write-Verbose "Removing Docker volume 'open-webui-foundry'..."
+                    docker volume rm open-webui-foundry | Out-Null
+                    Write-Host "  Removed Docker volume 'open-webui-foundry'." -ForegroundColor Green
+                }
+                catch {
+                    Write-Verbose "Failed to remove volume: $_"
+                    Write-Host "  Could not remove volume. It may still be in use." -ForegroundColor Yellow
+                }
+            }
+            else {
+                Write-Host "  Kept Docker volume (chat history preserved)." -ForegroundColor DarkGray
+            }
+        }
+    }
+    else {
+        Write-Verbose "Docker not found in PATH; skipping container and volume cleanup."
+        Write-Host "  Docker not available — skipped container/volume cleanup." -ForegroundColor DarkGray
     }
 
     # Stop Foundry Local service
