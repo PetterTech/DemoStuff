@@ -9,8 +9,9 @@ This demo uses [Microsoft Foundry Local](https://learn.microsoft.com/en-us/azure
 | Requirement | Windows | macOS |
 |---|---|---|
 | **PowerShell 7+** | [Install](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows) | [Install](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-macos) |
+| **Package manager** | `winget` ([Install](https://learn.microsoft.com/en-us/windows/package-manager/winget/)) | Homebrew `brew` ([Install](https://brew.sh/)) |
 
-> **Note:** Foundry Local and Docker Desktop (when needed) are installed automatically by the script (`winget` on Windows, `brew` on macOS).
+> **Note:** Foundry Local and Docker Desktop (when needed) are installed automatically by the script using `winget` on Windows and `brew` on macOS. Install the required package manager first if it isn't already available.
 
 ## Quick Start
 
@@ -25,6 +26,8 @@ That's it. The script will:
 3. Download and load the default model (`qwen2.5-0.5b`, ~500M params)
 4. Launch Open WebUI in a Docker container
 5. Open your browser to <http://localhost:3000>
+
+> **Security note:** Open WebUI runs without authentication (`WEBUI_AUTH=False`) for demo simplicity. Only run this on a trusted machine and network — do not expose the port to untrusted networks.
 
 ## Using a Different Model
 

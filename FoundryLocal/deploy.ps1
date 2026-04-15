@@ -128,9 +128,10 @@ if ($Cleanup) {
     }
 
     # Stop Foundry Local service
+    $StopTempErr = [System.IO.Path]::GetTempFileName()
     try {
         Write-Verbose "Stopping Foundry Local service..."
-        $StopProc = Start-Process -FilePath "foundry" -ArgumentList "service","stop" -NoNewWindow -Wait -PassThru -RedirectStandardError ([System.IO.Path]::GetTempFileName())
+        $StopProc = Start-Process -FilePath "foundry" -ArgumentList "service","stop" -NoNewWindow -Wait -PassThru -RedirectStandardError $StopTempErr
         if ($StopProc.ExitCode -ne 0) {
             throw "foundry service stop exited with code $($StopProc.ExitCode)."
         }
@@ -140,6 +141,9 @@ if ($Cleanup) {
     catch {
         Write-Verbose "Foundry service stop failed (may not be running): $_"
         Write-Host "  Foundry Local service was not running." -ForegroundColor DarkGray
+    }
+    finally {
+        Remove-Item $StopTempErr -ErrorAction SilentlyContinue
     }
 
     # Offer to remove cached model
@@ -330,6 +334,10 @@ if (-not $SkipOpenWebUI) {
             if ($Install -eq 'Y' -or $Install -eq 'y') {
                 Write-Host "Installing Docker Desktop..." -ForegroundColor Cyan
                 if ($Platform -eq "Windows") {
+                    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+                        Write-Error "winget is required to install Docker Desktop but was not found. Install winget from https://learn.microsoft.com/en-us/windows/package-manager/winget/ and re-run this script."
+                        exit 1
+                    }
                     try {
                         Write-Verbose "Installing Docker Desktop via winget..."
                         winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
@@ -342,6 +350,10 @@ if (-not $SkipOpenWebUI) {
                     }
                 }
                 elseif ($Platform -eq "macOS") {
+                    if (-not (Get-Command brew -ErrorAction SilentlyContinue)) {
+                        Write-Error "Homebrew (brew) is required to install Docker Desktop but was not found. Install Homebrew from https://brew.sh/ and re-run this script."
+                        exit 1
+                    }
                     try {
                         Write-Verbose "Installing Docker Desktop via Homebrew cask..."
                         brew install --cask docker
@@ -439,6 +451,10 @@ catch {
 if (-not $FoundryInstalled) {
     Write-Host "Installing Foundry Local..." -ForegroundColor Cyan
     if ($Platform -eq "Windows") {
+        if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+            Write-Error "winget is required to install Foundry Local but was not found. Install winget from https://learn.microsoft.com/en-us/windows/package-manager/winget/ and re-run this script."
+            exit 1
+        }
         try {
             Write-Verbose "Installing via winget..."
             winget install Microsoft.FoundryLocal --accept-source-agreements --accept-package-agreements
@@ -451,16 +467,28 @@ if (-not $FoundryInstalled) {
         }
     }
     elseif ($Platform -eq "macOS") {
+        if (-not (Get-Command brew -ErrorAction SilentlyContinue)) {
+            Write-Error "Homebrew (brew) is required to install Foundry Local but was not found. Install Homebrew from https://brew.sh/ and re-run this script."
+            exit 1
+        }
         try {
-            Write-Verbose "Installing via Homebrew..."
+            Write-Verbose "Adding the Microsoft Foundry Local Homebrew tap..."
             brew tap microsoft/foundrylocal
             if ($LASTEXITCODE -ne 0) { throw "brew tap exited with code $LASTEXITCODE" }
+            Write-Verbose "Microsoft Foundry Local Homebrew tap added."
+        }
+        catch {
+            Write-Verbose "Homebrew tap failed: $_"
+            throw
+        }
+        try {
+            Write-Verbose "Installing Foundry Local via Homebrew..."
             brew install foundrylocal
             if ($LASTEXITCODE -ne 0) { throw "brew install exited with code $LASTEXITCODE" }
             Write-Verbose "Foundry Local installed via Homebrew."
         }
         catch {
-            Write-Verbose "Homebrew installation failed: $_"
+            Write-Verbose "Homebrew install failed: $_"
             throw
         }
     }
@@ -507,6 +535,8 @@ foreach ($ServiceAction in $ServiceCommands) {
         if (-not $Proc.HasExited) {
             Write-Verbose "foundry service $ServiceAction timed out after $ServiceTimeout seconds, killing process."
             $Proc.Kill()
+            $Proc.WaitForExit()
+            continue
         }
         if ($Proc.ExitCode -eq 0) {
             $ServiceStarted = $true
@@ -533,8 +563,38 @@ if (-not $ServiceStarted) {
 }
 
 # Check if the model is already cached locally
-$CacheOutput = foundry cache list 2>&1 | Out-String
 Write-Verbose "Checking whether model '$Model' is already present in the local cache..."
+$CacheTempOut = [System.IO.Path]::GetTempFileName()
+$CacheTempErr = [System.IO.Path]::GetTempFileName()
+$CacheOutput = ""
+try {
+    Write-Verbose "Running 'foundry cache list'..."
+    $CacheProc = Start-Process -FilePath "foundry" -ArgumentList "cache", "list" `
+        -RedirectStandardOutput $CacheTempOut -RedirectStandardError $CacheTempErr `
+        -PassThru -NoNewWindow
+    $CacheExited = $CacheProc.WaitForExit(60000)
+    if (-not $CacheExited) {
+        Write-Verbose "foundry cache list timed out after 60 seconds, killing process."
+        $CacheProc.Kill()
+        $CacheProc.WaitForExit()
+        throw "foundry cache list timed out after 60 seconds."
+    }
+    if ($CacheProc.ExitCode -ne 0) {
+        $CacheError = Get-Content -Path $CacheTempErr -Raw -ErrorAction SilentlyContinue
+        throw "foundry cache list exited with code $($CacheProc.ExitCode): $CacheError"
+    }
+    $CacheOutput = Get-Content -Path $CacheTempOut -Raw -ErrorAction SilentlyContinue
+    Write-Verbose "'foundry cache list' completed successfully."
+}
+catch {
+    Write-Verbose "Cache check failed: $_"
+    Write-Error "Failed to query the local Foundry cache. Ensure the Foundry Local service is ready, then try again."
+    exit 1
+}
+finally {
+    Remove-Item $CacheTempOut, $CacheTempErr -ErrorAction SilentlyContinue
+}
+
 if ($CacheOutput | Select-String -SimpleMatch -Pattern $Model -Quiet) {
     Write-Verbose "Model '$Model' was found in the local cache."
     Write-Host "Model '$Model' is already downloaded." -ForegroundColor Green
@@ -630,6 +690,9 @@ try {
     if ($ExistingContainer -eq $ContainerName) {
         Write-Verbose "Removing existing container '$ContainerName'..."
         docker rm -f $ContainerName 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker rm -f exited with code $LASTEXITCODE"
+        }
         Write-Verbose "Existing container removed."
     }
 }
