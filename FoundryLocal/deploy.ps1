@@ -29,6 +29,11 @@
     If specified, only sets up Foundry Local without launching Open WebUI.
     Useful if you only want the Foundry Local service running.
 
+.PARAMETER Cleanup
+    If specified, tears down the demo environment: stops and removes the
+    Open WebUI Docker container and volume, and stops the Foundry Local service.
+    Optionally removes the cached model from disk.
+
 .LINK
     https://learn.microsoft.com/en-us/azure/foundry-local/what-is-foundry-local
     https://github.com/microsoft/Foundry-Local
@@ -44,7 +49,10 @@ Param(
     [int]$OpenWebUIPort = 3000,
 
     [Parameter(HelpMessage = "Skip Open WebUI setup and only start Foundry Local")]
-    [switch]$SkipOpenWebUI
+    [switch]$SkipOpenWebUI,
+
+    [Parameter(HelpMessage = "Tear down the demo environment (remove containers, stop services)")]
+    [switch]$Cleanup
 )
 
 #region Variables
@@ -59,6 +67,88 @@ $OpenWebUIImage = "ghcr.io/open-webui/open-webui:main"
 ########################################################################
 
 $ElapsedTime = [System.Diagnostics.Stopwatch]::StartNew()
+
+########################################################################
+#                         Cleanup mode                                 #
+########################################################################
+
+if ($Cleanup) {
+    Write-Host "Cleaning up Foundry Local demo environment..." -ForegroundColor Cyan
+
+    # Stop and remove Open WebUI container
+    $ExistingContainer = docker ps -a --filter "name=$ContainerName" --format "{{.ID}}" 2>$null
+    if ($ExistingContainer) {
+        try {
+            Write-Verbose "Stopping and removing Open WebUI container '$ContainerName'..."
+            docker rm -f $ContainerName | Out-Null
+            Write-Host "  Removed Docker container '$ContainerName'." -ForegroundColor Green
+        }
+        catch {
+            Write-Verbose "Failed to remove container: $_"
+            Write-Host "  Could not remove container '$ContainerName'." -ForegroundColor Yellow
+        }
+    }
+    else {
+        Write-Verbose "No container named '$ContainerName' found."
+        Write-Host "  No Open WebUI container found (already removed)." -ForegroundColor DarkGray
+    }
+
+    # Remove Open WebUI Docker volume
+    $ExistingVolume = docker volume ls --filter "name=open-webui-foundry" --format "{{.Name}}" 2>$null
+    if ($ExistingVolume) {
+        $RemoveVolume = Read-Host "Remove Open WebUI data volume (deletes chat history)? (Y/N)"
+        if ($RemoveVolume -eq 'Y' -or $RemoveVolume -eq 'y') {
+            try {
+                Write-Verbose "Removing Docker volume 'open-webui-foundry'..."
+                docker volume rm open-webui-foundry | Out-Null
+                Write-Host "  Removed Docker volume 'open-webui-foundry'." -ForegroundColor Green
+            }
+            catch {
+                Write-Verbose "Failed to remove volume: $_"
+                Write-Host "  Could not remove volume. It may still be in use." -ForegroundColor Yellow
+            }
+        }
+        else {
+            Write-Host "  Kept Docker volume (chat history preserved)." -ForegroundColor DarkGray
+        }
+    }
+
+    # Stop Foundry Local service
+    try {
+        Write-Verbose "Stopping Foundry Local service..."
+        foundry service stop 2>$null
+        Write-Host "  Stopped Foundry Local service." -ForegroundColor Green
+    }
+    catch {
+        Write-Verbose "Foundry service stop failed (may not be running): $_"
+        Write-Host "  Foundry Local service was not running." -ForegroundColor DarkGray
+    }
+
+    # Offer to remove cached model
+    $CacheOutput = foundry cache list 2>&1 | Out-String
+    if ($CacheOutput -match $Model) {
+        $RemoveModel = Read-Host "Remove cached model '$Model' from disk? (Y/N)"
+        if ($RemoveModel -eq 'Y' -or $RemoveModel -eq 'y') {
+            try {
+                Write-Verbose "Removing model '$Model' from cache..."
+                foundry cache rm $Model
+                Write-Host "  Removed model '$Model' from cache." -ForegroundColor Green
+            }
+            catch {
+                Write-Verbose "Failed to remove model from cache: $_"
+                Write-Host "  Could not remove model from cache." -ForegroundColor Yellow
+            }
+        }
+        else {
+            Write-Host "  Kept model '$Model' in cache." -ForegroundColor DarkGray
+        }
+    }
+
+    Write-Host ""
+    Write-Host "Cleanup complete." -ForegroundColor Green
+    Write-Host "Elapsed time: $($ElapsedTime.Elapsed.ToString('hh\:mm\:ss'))" -ForegroundColor DarkGray
+    exit 0
+}
 
 ########################################################################
 #                         Part 1 - Prerequisites                       #
