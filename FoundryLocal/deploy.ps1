@@ -102,77 +102,89 @@ if (-not $SkipOpenWebUI) {
     }
 
     if (-not $DockerReady) {
-        Write-Host "Docker Desktop is required for Open WebUI but was not detected." -ForegroundColor Yellow
-        Write-Host "  (If you recently installed Docker, try restarting your terminal first.)" -ForegroundColor DarkGray
-        $Install = Read-Host "Would you like to install Docker Desktop now? (Y/N)"
-        if ($Install -eq 'Y' -or $Install -eq 'y') {
-            Write-Host "Installing Docker Desktop..." -ForegroundColor Cyan
-            if ($Platform -eq "Windows") {
-                try {
-                    Write-Verbose "Installing Docker Desktop via winget..."
-                    winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
-                    Write-Verbose "Docker Desktop installed via winget."
-                }
-                catch {
-                    Write-Verbose "Docker Desktop winget installation failed: $_"
-                    throw
-                }
-            }
-            elseif ($Platform -eq "macOS") {
-                try {
-                    Write-Verbose "Installing Docker Desktop via Homebrew cask..."
-                    brew install --cask docker
-                    Write-Verbose "Docker Desktop installed via Homebrew."
-                }
-                catch {
-                    Write-Verbose "Docker Desktop Homebrew installation failed: $_"
-                    throw
-                }
-            }
-            # Launch Docker Desktop and wait for the engine to be ready
-            Write-Host "Starting Docker Desktop..." -ForegroundColor Cyan
-            if ($Platform -eq "Windows") {
-                $DockerPath = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
-                if (Test-Path $DockerPath) {
-                    Start-Process $DockerPath
-                } else {
-                    Write-Verbose "Docker Desktop executable not found at expected path, trying shell start..."
-                    Start-Process "Docker Desktop"
-                }
-            }
-            elseif ($Platform -eq "macOS") {
-                open -a Docker
-            }
+        # Distinguish between "not installed" and "installed but not running"
+        $DockerInstalled = [bool]$DockerCmd
 
-            Write-Host "  Waiting for Docker engine to be ready..." -ForegroundColor DarkGray
-            $DockerMaxRetries = 100
-            $DockerRetry = 0
-            while ($DockerRetry -lt $DockerMaxRetries) {
-                try {
-                    $null = docker info 2>&1
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Verbose "Docker engine is ready."
-                        $DockerReady = $true
-                        break
+        if (-not $DockerInstalled) {
+            # Docker CLI not found — offer to install
+            Write-Host "Docker Desktop is required for Open WebUI but was not detected." -ForegroundColor Yellow
+            Write-Host "  (If you recently installed Docker, try restarting your terminal first.)" -ForegroundColor DarkGray
+            $Install = Read-Host "Would you like to install Docker Desktop now? (Y/N)"
+            if ($Install -eq 'Y' -or $Install -eq 'y') {
+                Write-Host "Installing Docker Desktop..." -ForegroundColor Cyan
+                if ($Platform -eq "Windows") {
+                    try {
+                        Write-Verbose "Installing Docker Desktop via winget..."
+                        winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
+                        Write-Verbose "Docker Desktop installed via winget."
+                    }
+                    catch {
+                        Write-Verbose "Docker Desktop winget installation failed: $_"
+                        throw
                     }
                 }
-                catch {
-                    # Not ready yet
+                elseif ($Platform -eq "macOS") {
+                    try {
+                        Write-Verbose "Installing Docker Desktop via Homebrew cask..."
+                        brew install --cask docker
+                        Write-Verbose "Docker Desktop installed via Homebrew."
+                    }
+                    catch {
+                        Write-Verbose "Docker Desktop Homebrew installation failed: $_"
+                        throw
+                    }
                 }
-                $DockerRetry++
-                Start-Sleep -Seconds 3
             }
-
-            if (-not $DockerReady) {
-                Write-Error "Docker Desktop was installed but the engine did not start within 5 minutes. Please launch Docker Desktop manually and re-run this script."
+            else {
+                Write-Host "Skipping Docker install. Use -SkipOpenWebUI to run Foundry Local without the web interface." -ForegroundColor DarkGray
                 exit 1
             }
-            Write-Host "Docker Desktop is running." -ForegroundColor Green
         }
         else {
-            Write-Host "Skipping Docker install. Use -SkipOpenWebUI to run Foundry Local without the web interface." -ForegroundColor DarkGray
+            # Docker is installed but engine isn't running
+            Write-Host "Docker Desktop is installed but the engine is not running." -ForegroundColor Yellow
+        }
+
+        # Launch Docker Desktop and wait for the engine to be ready
+        Write-Host "Starting Docker Desktop..." -ForegroundColor Cyan
+        if ($Platform -eq "Windows") {
+            $DockerPath = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+            if (Test-Path $DockerPath) {
+                Start-Process $DockerPath
+            }
+            else {
+                Write-Verbose "Docker Desktop executable not found at expected path, trying shell start..."
+                Start-Process "Docker Desktop"
+            }
+        }
+        elseif ($Platform -eq "macOS") {
+            open -a Docker
+        }
+
+        Write-Host "  Waiting for Docker engine to be ready (up to 5 minutes)..." -ForegroundColor DarkGray
+        $DockerMaxRetries = 100
+        $DockerRetry = 0
+        while ($DockerRetry -lt $DockerMaxRetries) {
+            try {
+                $null = docker info 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Verbose "Docker engine is ready."
+                    $DockerReady = $true
+                    break
+                }
+            }
+            catch {
+                # Not ready yet
+            }
+            $DockerRetry++
+            Start-Sleep -Seconds 3
+        }
+
+        if (-not $DockerReady) {
+            Write-Error "Docker Desktop engine did not start within 5 minutes. Please launch Docker Desktop manually and re-run this script."
             exit 1
         }
+        Write-Host "Docker Desktop is running." -ForegroundColor Green
     }
 }
 
