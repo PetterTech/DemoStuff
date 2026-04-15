@@ -464,23 +464,52 @@ if (-not $FoundryInstalled) {
 ########################################################################
 
 Write-Host "Starting Foundry Local service..." -ForegroundColor Cyan
-try {
-    Write-Verbose "Restarting Foundry Local service to ensure a clean state..."
-    $null = foundry service start 2>&1 | Out-String
-    Write-Verbose "Foundry Local service started."
-    Write-Host "Foundry Local service is running." -ForegroundColor Green
-}
-catch {
-    Write-Verbose "Service start attempt failed, trying restart: $_"
+Write-Verbose "Starting Foundry Local service (timeout: 3 minutes)..."
+
+$ServiceStarted = $false
+$ServiceCommands = @("start", "restart")
+foreach ($ServiceAction in $ServiceCommands) {
+    Write-Verbose "Attempting 'foundry service $ServiceAction'..."
+    $TempOut = [System.IO.Path]::GetTempFileName()
     try {
-        $null = foundry service restart 2>&1 | Out-String
-        Write-Verbose "Foundry Local service restarted successfully."
-        Write-Host "Foundry Local service is running." -ForegroundColor Green
+        $Proc = Start-Process -FilePath "foundry" -ArgumentList "service", $ServiceAction `
+            -RedirectStandardOutput $TempOut -RedirectStandardError ([System.IO.Path]::GetTempFileName()) `
+            -PassThru -NoNewWindow
+        # Wait up to 3 minutes for the service to start
+        $ServiceTimeout = 180
+        $Waited = 0
+        while (-not $Proc.HasExited -and $Waited -lt $ServiceTimeout) {
+            Start-Sleep -Seconds 2
+            $Waited += 2
+            if ($Waited % 10 -eq 0) {
+                Write-Host "  Still waiting for Foundry Local service to $ServiceAction... ($Waited`s)" -ForegroundColor DarkGray
+            }
+        }
+        if (-not $Proc.HasExited) {
+            Write-Verbose "foundry service $ServiceAction timed out after $ServiceTimeout seconds, killing process."
+            $Proc.Kill()
+        }
+        if ($Proc.ExitCode -eq 0) {
+            $ServiceStarted = $true
+            Write-Verbose "Foundry Local service $($ServiceAction) succeeded."
+            Write-Host "Foundry Local service is running." -ForegroundColor Green
+            break
+        }
+        else {
+            Write-Verbose "foundry service $ServiceAction exited with code $($Proc.ExitCode)."
+        }
     }
     catch {
-        Write-Verbose "Service restart also failed: $_"
-        throw
+        Write-Verbose "foundry service $ServiceAction failed: $_"
     }
+    finally {
+        Remove-Item $TempOut -ErrorAction SilentlyContinue
+    }
+}
+
+if (-not $ServiceStarted) {
+    Write-Error "Failed to start Foundry Local service. Try running 'foundry service start' manually."
+    exit 1
 }
 
 # Check if the model is already cached locally
