@@ -166,6 +166,43 @@ if ($Cleanup) {
         Write-Host "  No cached model '$Model' found." -ForegroundColor DarkGray
     }
 
+    # Uninstall Foundry Local CLI
+    $FoundryCmd = Get-Command foundry -ErrorAction SilentlyContinue
+    if ($FoundryCmd) {
+        $RemoveFoundry = Read-Host "Uninstall Foundry Local CLI? (Y/N)"
+        if ($RemoveFoundry -eq 'Y' -or $RemoveFoundry -eq 'y') {
+            Write-Verbose "Detecting operating system for uninstall..."
+            if ($IsWindows) {
+                try {
+                    Write-Verbose "Uninstalling Foundry Local via winget..."
+                    winget uninstall Microsoft.FoundryLocal --accept-source-agreements
+                    Write-Host "  Uninstalled Foundry Local CLI." -ForegroundColor Green
+                }
+                catch {
+                    Write-Verbose "winget uninstall failed: $_"
+                    Write-Host "  Could not uninstall Foundry Local. Try: winget uninstall Microsoft.FoundryLocal" -ForegroundColor Yellow
+                }
+            }
+            elseif ($IsMacOS) {
+                try {
+                    Write-Verbose "Uninstalling Foundry Local via Homebrew..."
+                    brew uninstall foundrylocal
+                    Write-Host "  Uninstalled Foundry Local CLI." -ForegroundColor Green
+                }
+                catch {
+                    Write-Verbose "brew uninstall failed: $_"
+                    Write-Host "  Could not uninstall Foundry Local. Try: brew uninstall foundrylocal" -ForegroundColor Yellow
+                }
+            }
+        }
+        else {
+            Write-Host "  Kept Foundry Local CLI installed." -ForegroundColor DarkGray
+        }
+    }
+    else {
+        Write-Host "  Foundry Local CLI not found (already uninstalled)." -ForegroundColor DarkGray
+    }
+
     Write-Host ""
     Write-Host "Cleanup complete." -ForegroundColor Green
     Write-Host "Elapsed time: $($ElapsedTime.Elapsed.ToString('hh\:mm\:ss'))" -ForegroundColor DarkGray
