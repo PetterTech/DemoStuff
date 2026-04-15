@@ -79,15 +79,26 @@ Write-Verbose "Running on $Platform."
 if (-not $SkipOpenWebUI) {
     Write-Verbose "Checking for Docker..."
     $DockerReady = $false
-    try {
-        $DockerVersion = docker version --format '{{.Server.Version}}' 2>$null
-        if ($DockerVersion) {
-            $DockerReady = $true
-            Write-Verbose "Docker version $DockerVersion found."
+
+    # First check if docker CLI is available
+    $DockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if ($DockerCmd) {
+        Write-Verbose "Docker CLI found at $($DockerCmd.Source)."
+        # Then check if the engine is running
+        try {
+            $DockerInfo = docker info 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $DockerReady = $true
+                Write-Verbose "Docker engine is running."
+            } else {
+                Write-Verbose "Docker CLI found but engine is not running."
+            }
         }
-    }
-    catch {
-        Write-Verbose "Docker not found or not running."
+        catch {
+            Write-Verbose "Docker engine check failed: $_"
+        }
+    } else {
+        Write-Verbose "Docker CLI not found in PATH."
     }
 
     if (-not $DockerReady) {
@@ -137,9 +148,9 @@ if (-not $SkipOpenWebUI) {
             $DockerRetry = 0
             while ($DockerRetry -lt $DockerMaxRetries) {
                 try {
-                    $DockerVersion = docker version --format '{{.Server.Version}}' 2>$null
-                    if ($DockerVersion) {
-                        Write-Verbose "Docker engine is ready (version $DockerVersion)."
+                    $null = docker info 2>&1
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Verbose "Docker engine is ready."
                         $DockerReady = $true
                         break
                     }
