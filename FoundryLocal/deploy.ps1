@@ -124,7 +124,11 @@ if ($Cleanup) {
     # Stop Foundry Local service
     try {
         Write-Verbose "Stopping Foundry Local service..."
-        foundry service stop 2>$null
+        $StopProc = Start-Process -FilePath "foundry" -ArgumentList "service","stop" -NoNewWindow -Wait -PassThru -RedirectStandardError ([System.IO.Path]::GetTempFileName())
+        if ($StopProc.ExitCode -ne 0) {
+            throw "foundry service stop exited with code $($StopProc.ExitCode)."
+        }
+        Write-Verbose "Successfully stopped Foundry Local service."
         Write-Host "  Stopped Foundry Local service." -ForegroundColor Green
     }
     catch {
@@ -159,8 +163,16 @@ if ($Cleanup) {
         if ($RemoveModel -eq 'Y' -or $RemoveModel -eq 'y') {
             try {
                 Write-Verbose "Removing model '$Model' from cache..."
-                foundry cache rm $Model
-                Write-Host "  Removed model '$Model' from cache." -ForegroundColor Green
+                $RemoveCacheProc = Start-Process -FilePath "foundry" -ArgumentList "cache", "rm", $Model -NoNewWindow -PassThru
+                $null = $RemoveCacheProc.WaitForExit()
+                if ($RemoveCacheProc.ExitCode -eq 0) {
+                    Write-Verbose "Successfully removed model '$Model' from cache."
+                    Write-Host "  Removed model '$Model' from cache." -ForegroundColor Green
+                }
+                else {
+                    Write-Verbose "Failed to remove model '$Model' from cache. foundry exited with code $($RemoveCacheProc.ExitCode)."
+                    Write-Host "  Could not remove model from cache." -ForegroundColor Yellow
+                }
             }
             catch {
                 Write-Verbose "Failed to remove model from cache: $_"
@@ -562,11 +574,11 @@ try {
     $ServiceOutput = foundry service status 2>&1 | Out-String
     Write-Verbose "Service status output: $ServiceOutput"
 
-    # Extract the endpoint URL (e.g., http://127.0.0.1:XXXXX or http://localhost:XXXXX)
-    if ($ServiceOutput -match 'https?://[^/\s]+:(\d+)') {
-        $FoundryPort = $Matches[1]
-        $FoundryEndpoint = "http://127.0.0.1:$FoundryPort"
-        Write-Verbose "Foundry Local endpoint: $FoundryEndpoint"
+    # Extract the endpoint URL exactly as reported by the service so the scheme and host are preserved.
+    if ($ServiceOutput -match '(https?://[^/\s]+:(\d+))') {
+        $FoundryEndpoint = $Matches[1]
+        $FoundryPort = $Matches[2]
+        Write-Verbose "Foundry Local endpoint detected from service status: $FoundryEndpoint"
         Write-Host "Foundry Local running at $FoundryEndpoint" -ForegroundColor Green
     }
     else {

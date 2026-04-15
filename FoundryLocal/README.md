@@ -49,7 +49,6 @@ foundry model list
 | `-Model` | `qwen2.5-0.5b` | Model alias to load |
 | `-OpenWebUIPort` | `3000` | Local port for the web UI |
 | `-SkipOpenWebUI` | — | Only start Foundry Local (no web UI) |
-| `-SkipOpenWebUI` | — | Only start Foundry Local (no web UI) |
 | `-Cleanup` | — | Stop and remove the local demo resources created by the script |
 
 ### Examples
