@@ -164,17 +164,29 @@ if (-not $SkipOpenWebUI) {
         Write-Host "  Waiting for Docker engine to be ready (up to 5 minutes)..." -ForegroundColor DarkGray
         $DockerMaxRetries = 100
         $DockerRetry = 0
+        $DockerCheckTimeout = 5000 # milliseconds per check
         while ($DockerRetry -lt $DockerMaxRetries) {
             try {
-                $null = docker info 2>&1
-                if ($LASTEXITCODE -eq 0) {
+                # Run docker info with a per-check timeout to avoid hanging when engine is stuck
+                $TempOut = [System.IO.Path]::GetTempFileName()
+                $TempErr = [System.IO.Path]::GetTempFileName()
+                $Proc = Start-Process -FilePath "docker" -ArgumentList "info" -NoNewWindow -PassThru -RedirectStandardOutput $TempOut -RedirectStandardError $TempErr
+                $Exited = $Proc.WaitForExit($DockerCheckTimeout)
+                if ($Exited -and $Proc.ExitCode -eq 0) {
                     Write-Verbose "Docker engine is ready."
                     $DockerReady = $true
                     break
                 }
+                if (-not $Exited) {
+                    Write-Verbose "Docker info check timed out (attempt $($DockerRetry + 1)), retrying..."
+                    $Proc.Kill()
+                }
             }
             catch {
                 # Not ready yet
+            }
+            finally {
+                Remove-Item $TempOut, $TempErr -Force -ErrorAction SilentlyContinue
             }
             $DockerRetry++
             Start-Sleep -Seconds 3
