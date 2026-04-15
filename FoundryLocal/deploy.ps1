@@ -133,7 +133,7 @@ if (-not $SkipOpenWebUI) {
             }
 
             Write-Host "  Waiting for Docker engine to be ready..." -ForegroundColor DarkGray
-            $DockerMaxRetries = 60
+            $DockerMaxRetries = 100
             $DockerRetry = 0
             while ($DockerRetry -lt $DockerMaxRetries) {
                 try {
@@ -152,7 +152,7 @@ if (-not $SkipOpenWebUI) {
             }
 
             if (-not $DockerReady) {
-                Write-Error "Docker Desktop was installed but the engine did not start within 3 minutes. Please launch Docker Desktop manually and re-run this script."
+                Write-Error "Docker Desktop was installed but the engine did not start within 5 minutes. Please launch Docker Desktop manually and re-run this script."
                 exit 1
             }
             Write-Host "Docker Desktop is running." -ForegroundColor Green
