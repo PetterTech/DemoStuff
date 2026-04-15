@@ -84,6 +84,9 @@ if ($Cleanup) {
             try {
                 Write-Verbose "Stopping and removing Open WebUI container '$ContainerName'..."
                 docker rm -f $ContainerName | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    throw "docker rm exited with code $LASTEXITCODE."
+                }
                 Write-Host "  Removed Docker container '$ContainerName'." -ForegroundColor Green
             }
             catch {
@@ -104,6 +107,9 @@ if ($Cleanup) {
                 try {
                     Write-Verbose "Removing Docker volume '$VolumeName'..."
                     docker volume rm $VolumeName | Out-Null
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "docker volume rm exited with code $LASTEXITCODE."
+                    }
                     Write-Host "  Removed Docker volume '$VolumeName'." -ForegroundColor Green
                 }
                 catch {
