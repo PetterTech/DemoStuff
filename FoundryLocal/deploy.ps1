@@ -238,14 +238,16 @@ if (-not $FoundryInstalled) {
 Write-Host "Starting Foundry Local service..." -ForegroundColor Cyan
 try {
     Write-Verbose "Restarting Foundry Local service to ensure a clean state..."
-    foundry service start 2>$null
+    $null = foundry service start 2>&1 | Out-String
     Write-Verbose "Foundry Local service started."
+    Write-Host "Foundry Local service is running." -ForegroundColor Green
 }
 catch {
     Write-Verbose "Service start attempt failed, trying restart: $_"
     try {
-        foundry service restart
+        $null = foundry service restart 2>&1 | Out-String
         Write-Verbose "Foundry Local service restarted successfully."
+        Write-Host "Foundry Local service is running." -ForegroundColor Green
     }
     catch {
         Write-Verbose "Service restart also failed: $_"
@@ -253,11 +255,31 @@ catch {
     }
 }
 
-Write-Host "Downloading and loading model '$Model'..." -ForegroundColor Cyan
-Write-Host "  (This may take a while on first run as the model is downloaded)" -ForegroundColor DarkGray
+# Check if the model is already cached locally
+$CacheOutput = foundry cache list 2>&1 | Out-String
+if ($CacheOutput -match $Model) {
+    Write-Host "Model '$Model' is already downloaded." -ForegroundColor Green
+}
+else {
+    Write-Host "Downloading model '$Model'..." -ForegroundColor Cyan
+    Write-Host "  (This may take several minutes on first run depending on your connection)" -ForegroundColor DarkGray
+    Write-Host "  Tip: Run 'foundry cache list' in another terminal to check download status." -ForegroundColor DarkGray
+    try {
+        Write-Verbose "Running 'foundry model download $Model'..."
+        foundry model download $Model
+        Write-Verbose "Model '$Model' downloaded successfully."
+        Write-Host "Model '$Model' downloaded." -ForegroundColor Green
+    }
+    catch {
+        Write-Verbose "Model download failed: $_"
+        Write-Error "Failed to download model '$Model'. Run 'foundry model list' to see available models."
+        exit 1
+    }
+}
+
+Write-Host "Loading model '$Model' into Foundry Local service..." -ForegroundColor Cyan
 try {
     Write-Verbose "Running 'foundry model load $Model'..."
-    foundry model download $Model
     foundry model load $Model
     Write-Verbose "Model '$Model' loaded successfully."
     Write-Host "Model '$Model' is ready." -ForegroundColor Green
