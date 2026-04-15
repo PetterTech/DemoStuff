@@ -159,7 +159,7 @@ function Assert-ExitCode {
 
 #region Part 1 - Deploying infrastructure
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 1 of 5 — Deploying infrastructure' -PercentComplete 0 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 1 of 6 — Deploying infrastructure' -PercentComplete 0 -ErrorAction SilentlyContinue
 
 if (-not $SkipInfrastructure) {
     Write-Verbose 'Deploying infrastructure...'
@@ -235,7 +235,7 @@ else {
 
 #region Part 2 - Capturing deployment outputs
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 2 of 5 — Capturing deployment outputs' -PercentComplete 20 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 2 of 6 — Capturing deployment outputs' -PercentComplete 15 -ErrorAction SilentlyContinue
 Write-Verbose 'Capturing deployment outputs...'
 
 try {
@@ -273,7 +273,7 @@ Write-Verbose "Tenant:         $TenantId"
 
 #region Part 3 - Generating YAML manifests
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 3 of 5 — Generating YAML manifests' -PercentComplete 40 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 3 of 6 — Generating YAML manifests' -PercentComplete 30 -ErrorAction SilentlyContinue
 Write-Verbose 'Generating YAML manifests...'
 
 $DeploymentContextFileName = 'deployment-context.json'
@@ -317,7 +317,7 @@ Write-Verbose "Generated manifests in $GeneratedDir"
 
 #region Part 4 - Connecting to cluster
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 4 of 5 — Connecting to cluster' -PercentComplete 60 -ErrorAction SilentlyContinue
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 4 of 6 — Connecting to cluster' -PercentComplete 50 -ErrorAction SilentlyContinue
 Write-Verbose 'Connecting to cluster...'
 
 try {
@@ -342,17 +342,100 @@ catch {
 #endregion Part 4 - Connecting to cluster
 
 ########################################################################
-#              Part 5 - Installing ASO                                 #
+#              Part 5 - Installing cert-manager                        #
 ########################################################################
 
-#region Part 5 - Installing ASO
+#region Part 5 - Installing cert-manager
 
-Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 5 of 5 — Installing Azure Service Operator' -PercentComplete 80 -ErrorAction SilentlyContinue
+# cert-manager is a hard prerequisite for ASO v2 — ASO uses it for webhook
+# TLS certificates. It must be running before the ASO Helm install.
+
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 5 of 6 — Installing cert-manager' -PercentComplete 80 -ErrorAction SilentlyContinue
+Write-Verbose 'Installing cert-manager...'
+
+# Remove the ValidatingAdmissionPolicy binding that blocks webhook installs on AKS Automatic
+try {
+    Write-Verbose 'Removing AKS-managed ValidatingAdmissionPolicy binding if it exists...'
+    kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found 2>$null
+    Assert-ExitCode 'kubectl delete validatingadmissionpolicybinding failed.'
+    Write-Verbose 'AKS-managed ValidatingAdmissionPolicy binding removal completed.'
+}
+catch {
+    Write-Verbose "Failed to remove AKS-managed ValidatingAdmissionPolicy binding: $($_.Exception.Message)"
+    throw
+}
+
+try {
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+    Assert-ExitCode 'kubectl apply cert-manager failed.'
+
+    Write-Verbose 'Waiting for cert-manager deployments to become available...'
+    kubectl wait deployment cert-manager cert-manager-cainjector cert-manager-webhook `
+        --for=condition=Available `
+        --namespace cert-manager `
+        --timeout=300s
+    Assert-ExitCode 'cert-manager deployments did not become available in time.'
+    Write-Verbose 'cert-manager ready.'
+}
+catch {
+    Write-Verbose "cert-manager install failed: $($_.Exception.Message)"
+    throw
+}
+
+#endregion Part 5 - Installing cert-manager
+
+########################################################################
+#              Part 6 - Installing ASO                                 #
+########################################################################
+
+#region Part 6 - Installing ASO
+
+Write-Progress -Id 0 -Activity 'ASO deployment' -Status 'Part 6 of 6 — Installing Azure Service Operator' -PercentComplete 90 -ErrorAction SilentlyContinue
 Write-Verbose 'Installing Azure Service Operator...'
 
-# Remove the ValidatingAdmissionPolicy binding that may conflict with ASO webhooks on AKS Automatic
-kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found 2>$null
-# Intentionally not checking exit code — binding may already be absent
+try {
+    # Uninstall existing Helm release first (cleanest way to remove all Helm-managed resources),
+    # then delete the namespace and poll until it is fully gone — not just "Terminating".
+    # This prevents AKS Gatekeeper from seeing stale services with the same selector.
+    $HelmStatus = helm status aso --namespace azureserviceoperator-system 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Verbose "Existing ASO Helm release found — uninstalling. Helm status output: $($HelmStatus -join [Environment]::NewLine)"
+        helm uninstall aso --namespace azureserviceoperator-system --wait
+        Assert-ExitCode 'helm uninstall aso failed.'
+        Write-Verbose 'Helm release uninstalled.'
+    }
+
+    $NsExists = kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null
+    Assert-ExitCode 'kubectl get namespace azureserviceoperator-system failed.'
+    if ($NsExists) {
+        Write-Verbose 'Removing azureserviceoperator-system namespace...'
+        kubectl delete namespace azureserviceoperator-system --ignore-not-found
+        Assert-ExitCode 'kubectl delete namespace azureserviceoperator-system failed.'
+
+        # Poll until the namespace is fully gone — kubectl wait --for=delete can return
+        # while the namespace is still in Terminating state, which causes Gatekeeper to
+        # still see the old services and block the new install.
+        # $LASTEXITCODE is checked after each kubectl call so connectivity/auth failures
+        # are not silently misread as "namespace gone".
+        $Deadline = (Get-Date).AddSeconds(180)
+        do {
+            $NsStillExists = kubectl get namespace azureserviceoperator-system --ignore-not-found 2>$null
+            Assert-ExitCode 'kubectl get namespace azureserviceoperator-system failed during termination wait.'
+            if ($NsStillExists) {
+                Write-Verbose 'Waiting for namespace azureserviceoperator-system to finish terminating...'
+                Start-Sleep -Seconds 5
+            }
+        } while ($NsStillExists -and (Get-Date) -lt $Deadline)
+        if ($NsStillExists) {
+            throw 'Namespace azureserviceoperator-system did not terminate within 180 seconds.'
+        }
+        Write-Verbose 'Namespace fully removed.'
+    }
+}
+catch {
+    Write-Verbose "Failed to clean up existing ASO namespace: $($_.Exception.Message)"
+    throw
+}
 
 try {
     Write-Verbose 'Adding ASO Helm repo...'
@@ -370,12 +453,44 @@ catch {
 
 try {
     Write-Verbose 'Installing ASO via Helm...'
+
+    # Temporarily remove the AKS-managed Gatekeeper constraint that blocks two services
+    # with the same selector in one namespace. ASO's webhook and metrics services both
+    # select 'control-plane: controller-manager', which triggers this policy on
+    # AKS Automatic. The constraint name includes a hash suffix, so discover it dynamically.
+    # AKS will recreate the constraint automatically on its next reconciliation cycle.
+    # stderr is merged into the output (2>&1) so connectivity/auth failures are captured
+    # and can be distinguished from a benign "CRD not registered on this cluster" result.
+    Write-Verbose 'Checking for unique-service-selector Gatekeeper constraints...'
+    $UniqueServiceConstraintRaw = kubectl get k8sazurev1uniqueserviceselector -o jsonpath='{.items[0].metadata.name}' 2>&1
+    $UniqueServiceConstraint = ($UniqueServiceConstraintRaw | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        Write-Verbose "kubectl get k8sazurev1uniqueserviceselector returned exit code $LASTEXITCODE — checking error type..."
+        if ($UniqueServiceConstraint -like "*the server doesn't have a resource type*") {
+            # The CRD is not registered on this cluster (non-AKS Automatic) — safe to skip.
+            Write-Verbose 'k8sazurev1uniqueserviceselector CRD not present on this cluster — skipping constraint removal.'
+        }
+        else {
+            throw "kubectl get k8sazurev1uniqueserviceselector failed: $UniqueServiceConstraint"
+        }
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($UniqueServiceConstraint)) {
+        Write-Verbose "Removing Gatekeeper constraint '$UniqueServiceConstraint' before Helm install..."
+        kubectl delete k8sazurev1uniqueserviceselector $UniqueServiceConstraint --ignore-not-found 2>$null
+        Assert-ExitCode "Failed to remove Gatekeeper constraint '$UniqueServiceConstraint'."
+        Write-Verbose "Removed Gatekeeper constraint '$UniqueServiceConstraint' or it no longer existed."
+    }
+    else {
+        Write-Verbose 'No unique-service-selector constraints found — continuing.'
+    }
+
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing ASO chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
-    helm upgrade aso asohelmchart/aso-helm-chart `
+    helm upgrade aso asohelmchart/azure-service-operator `
         --install `
         --namespace azureserviceoperator-system `
         --create-namespace `
         --values "$GeneratedDir/aso-values.yaml" `
+        --cleanup-on-fail `
         --wait
     Assert-ExitCode 'helm upgrade/install aso failed.'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Completed -ErrorAction SilentlyContinue
@@ -388,13 +503,14 @@ catch {
 
 Write-Progress -Id 0 -Activity 'ASO deployment' -Completed -ErrorAction SilentlyContinue
 
-#endregion Part 5 - Installing ASO
+#endregion Part 6 - Installing ASO
 
 Write-Verbose "All done. Elapsed time: $($ElapsedTime.Elapsed.ToString())."
 
 Write-Host ''
 Write-Host 'Azure Service Operator is ready. To test with a Storage Account:' -ForegroundColor Green
-Write-Host "  kubectl apply -f $GeneratedDir/examples/storage-account.yaml"
+$ExampleFile = Join-Path $GeneratedDir 'examples' 'storage-account.yaml'
+Write-Host "  kubectl apply -f $ExampleFile"
 Write-Host '  kubectl get storageaccount -w'
 Write-Host ''
 Write-Host 'To clean up everything:'
