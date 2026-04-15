@@ -214,6 +214,45 @@ if ($Cleanup) {
         Write-Host "  Foundry Local not found (already uninstalled)." -ForegroundColor DarkGray
     }
 
+    # Uninstall Docker Desktop
+    $DockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if ($DockerCmd) {
+        $RemoveDocker = Read-Host "Uninstall Docker Desktop? (Y/N)"
+        if ($RemoveDocker -eq 'Y' -or $RemoveDocker -eq 'y') {
+            Write-Verbose "Detecting operating system for Docker uninstall..."
+            if ($IsWindows) {
+                try {
+                    Write-Verbose "Uninstalling Docker Desktop via winget..."
+                    winget uninstall Docker.DockerDesktop --accept-source-agreements
+                    if ($LASTEXITCODE -ne 0) { throw "winget uninstall exited with code $LASTEXITCODE" }
+                    Write-Host "  Uninstalled Docker Desktop." -ForegroundColor Green
+                }
+                catch {
+                    Write-Verbose "winget uninstall failed: $_"
+                    Write-Host "  Could not uninstall Docker Desktop. Try: winget uninstall Docker.DockerDesktop" -ForegroundColor Yellow
+                }
+            }
+            elseif ($IsMacOS) {
+                try {
+                    Write-Verbose "Uninstalling Docker Desktop via Homebrew..."
+                    brew uninstall --cask docker
+                    if ($LASTEXITCODE -ne 0) { throw "brew uninstall exited with code $LASTEXITCODE" }
+                    Write-Host "  Uninstalled Docker Desktop." -ForegroundColor Green
+                }
+                catch {
+                    Write-Verbose "brew uninstall failed: $_"
+                    Write-Host "  Could not uninstall Docker Desktop. Try: brew uninstall --cask docker" -ForegroundColor Yellow
+                }
+            }
+        }
+        else {
+            Write-Host "  Kept Docker Desktop installed." -ForegroundColor DarkGray
+        }
+    }
+    else {
+        Write-Host "  Docker Desktop not found (already uninstalled)." -ForegroundColor DarkGray
+    }
+
     Write-Host ""
     Write-Host "Cleanup complete." -ForegroundColor Green
     Write-Host "Elapsed time: $($ElapsedTime.Elapsed.ToString('hh\:mm\:ss'))" -ForegroundColor DarkGray
