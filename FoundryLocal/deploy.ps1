@@ -78,17 +78,52 @@ Write-Verbose "Running on $Platform."
 # Check Docker (required for Open WebUI)
 if (-not $SkipOpenWebUI) {
     Write-Verbose "Checking for Docker..."
+    $DockerReady = $false
     try {
         $DockerVersion = docker version --format '{{.Server.Version}}' 2>$null
-        if (-not $DockerVersion) {
-            throw "Docker is not running."
+        if ($DockerVersion) {
+            $DockerReady = $true
+            Write-Verbose "Docker version $DockerVersion found."
         }
-        Write-Verbose "Docker version $DockerVersion found."
     }
     catch {
-        Write-Verbose "Docker check failed."
-        Write-Error "Docker Desktop is required for Open WebUI. Install it from https://www.docker.com/products/docker-desktop/ and ensure it is running. Alternatively, use -SkipOpenWebUI to run Foundry Local without the web interface."
-        exit 1
+        Write-Verbose "Docker not found or not running."
+    }
+
+    if (-not $DockerReady) {
+        Write-Host "Docker Desktop is required for Open WebUI but was not detected." -ForegroundColor Yellow
+        $Install = Read-Host "Would you like to install Docker Desktop now? (Y/N)"
+        if ($Install -eq 'Y' -or $Install -eq 'y') {
+            Write-Host "Installing Docker Desktop..." -ForegroundColor Cyan
+            if ($Platform -eq "Windows") {
+                try {
+                    Write-Verbose "Installing Docker Desktop via winget..."
+                    winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
+                    Write-Verbose "Docker Desktop installed via winget."
+                }
+                catch {
+                    Write-Verbose "Docker Desktop winget installation failed: $_"
+                    throw
+                }
+            }
+            elseif ($Platform -eq "macOS") {
+                try {
+                    Write-Verbose "Installing Docker Desktop via Homebrew cask..."
+                    brew install --cask docker
+                    Write-Verbose "Docker Desktop installed via Homebrew."
+                }
+                catch {
+                    Write-Verbose "Docker Desktop Homebrew installation failed: $_"
+                    throw
+                }
+            }
+            Write-Host "Docker Desktop installed. Please launch it and wait for it to start, then re-run this script." -ForegroundColor Yellow
+            exit 0
+        }
+        else {
+            Write-Host "Skipping Docker install. Use -SkipOpenWebUI to run Foundry Local without the web interface." -ForegroundColor DarkGray
+            exit 1
+        }
     }
 }
 
