@@ -7,7 +7,7 @@
 
 .DESCRIPTION
     This script sets up Microsoft Foundry Local and Open WebUI for a local AI
-    chat experience. It installs the Foundry Local CLI (if needed), downloads
+    chat experience. It installs Foundry Local (if needed), downloads
     and loads an AI model, and launches Open WebUI via Docker for a browser-based
     chat interface. Everything runs on your device with no cloud dependency.
 
@@ -31,8 +31,8 @@
 
 .PARAMETER Cleanup
     If specified, tears down the demo environment: stops and removes the
-    Open WebUI Docker container and volume, and stops the Foundry Local service.
-    Optionally removes the cached model from disk.
+    Open WebUI Docker container and volume, stops the Foundry Local service,
+    and optionally uninstalls Foundry Local.
 
 .LINK
     https://learn.microsoft.com/en-us/azure/foundry-local/what-is-foundry-local
@@ -166,17 +166,17 @@ if ($Cleanup) {
         Write-Host "  No cached model '$Model' found." -ForegroundColor DarkGray
     }
 
-    # Uninstall Foundry Local CLI
+    # Uninstall Foundry Local
     $FoundryCmd = Get-Command foundry -ErrorAction SilentlyContinue
     if ($FoundryCmd) {
-        $RemoveFoundry = Read-Host "Uninstall Foundry Local CLI? (Y/N)"
+        $RemoveFoundry = Read-Host "Uninstall Foundry Local? (Y/N)"
         if ($RemoveFoundry -eq 'Y' -or $RemoveFoundry -eq 'y') {
             Write-Verbose "Detecting operating system for uninstall..."
             if ($IsWindows) {
                 try {
                     Write-Verbose "Uninstalling Foundry Local via winget..."
                     winget uninstall Microsoft.FoundryLocal --accept-source-agreements
-                    Write-Host "  Uninstalled Foundry Local CLI." -ForegroundColor Green
+                    Write-Host "  Uninstalled Foundry Local." -ForegroundColor Green
                 }
                 catch {
                     Write-Verbose "winget uninstall failed: $_"
@@ -187,7 +187,7 @@ if ($Cleanup) {
                 try {
                     Write-Verbose "Uninstalling Foundry Local via Homebrew..."
                     brew uninstall foundrylocal
-                    Write-Host "  Uninstalled Foundry Local CLI." -ForegroundColor Green
+                    Write-Host "  Uninstalled Foundry Local." -ForegroundColor Green
                 }
                 catch {
                     Write-Verbose "brew uninstall failed: $_"
@@ -196,11 +196,11 @@ if ($Cleanup) {
             }
         }
         else {
-            Write-Host "  Kept Foundry Local CLI installed." -ForegroundColor DarkGray
+            Write-Host "  Kept Foundry Local installed." -ForegroundColor DarkGray
         }
     }
     else {
-        Write-Host "  Foundry Local CLI not found (already uninstalled)." -ForegroundColor DarkGray
+        Write-Host "  Foundry Local not found (already uninstalled)." -ForegroundColor DarkGray
     }
 
     Write-Host ""
@@ -350,29 +350,29 @@ if (-not $SkipOpenWebUI) {
 }
 
 ########################################################################
-#                  Part 2 - Install Foundry Local CLI                   #
+#                  Part 2 - Install Foundry Local                   #
 ########################################################################
 
-Write-Verbose "Checking if Foundry Local CLI is installed..."
+Write-Verbose "Checking if Foundry Local is installed..."
 $FoundryInstalled = $false
 try {
     $FoundryVersion = foundry --version 2>$null
     if ($FoundryVersion) {
         $FoundryInstalled = $true
-        Write-Verbose "Foundry Local CLI is already installed: $FoundryVersion"
+        Write-Verbose "Foundry Local is already installed: $FoundryVersion"
     }
 }
 catch {
-    Write-Verbose "Foundry Local CLI not found."
+    Write-Verbose "Foundry Local not found."
 }
 
 if (-not $FoundryInstalled) {
-    Write-Host "Installing Foundry Local CLI..." -ForegroundColor Cyan
+    Write-Host "Installing Foundry Local..." -ForegroundColor Cyan
     if ($Platform -eq "Windows") {
         try {
             Write-Verbose "Installing via winget..."
             winget install Microsoft.FoundryLocal --accept-source-agreements --accept-package-agreements
-            Write-Verbose "Foundry Local CLI installed via winget."
+            Write-Verbose "Foundry Local installed via winget."
         }
         catch {
             Write-Verbose "winget installation failed: $_"
@@ -384,7 +384,7 @@ if (-not $FoundryInstalled) {
             Write-Verbose "Installing via Homebrew..."
             brew tap microsoft/foundrylocal
             brew install foundrylocal
-            Write-Verbose "Foundry Local CLI installed via Homebrew."
+            Write-Verbose "Foundry Local installed via Homebrew."
         }
         catch {
             Write-Verbose "Homebrew installation failed: $_"
@@ -395,11 +395,11 @@ if (-not $FoundryInstalled) {
     # Verify installation
     try {
         $FoundryVersion = foundry --version
-        Write-Host "Foundry Local CLI installed: $FoundryVersion" -ForegroundColor Green
+        Write-Host "Foundry Local installed: $FoundryVersion" -ForegroundColor Green
     }
     catch {
         Write-Verbose "Post-install verification failed: $_"
-        Write-Error "Foundry Local CLI installation could not be verified. You may need to restart your terminal and try again."
+        Write-Error "Foundry Local installation could not be verified. You may need to restart your terminal and try again."
         exit 1
     }
 }
