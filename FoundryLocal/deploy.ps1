@@ -103,6 +103,7 @@ if (-not $SkipOpenWebUI) {
 
     if (-not $DockerReady) {
         Write-Host "Docker Desktop is required for Open WebUI but was not detected." -ForegroundColor Yellow
+        Write-Host "  (If you recently installed Docker, try restarting your terminal first.)" -ForegroundColor DarkGray
         $Install = Read-Host "Would you like to install Docker Desktop now? (Y/N)"
         if ($Install -eq 'Y' -or $Install -eq 'y') {
             Write-Host "Installing Docker Desktop..." -ForegroundColor Cyan
