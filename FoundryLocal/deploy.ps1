@@ -58,6 +58,7 @@ Param(
 #region Variables
 
 $ContainerName = "open-webui-foundry"
+$VolumeName = "open-webui-foundry"
 $OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.3.32"
 
 #endregion Variables
@@ -96,14 +97,14 @@ if ($Cleanup) {
         }
 
         # Remove Open WebUI Docker volume
-        $ExistingVolume = docker volume ls --filter "name=open-webui-foundry" --format "{{.Name}}" 2>$null
+        $ExistingVolume = docker volume ls --filter "name=$VolumeName" --format "{{.Name}}" 2>$null
         if ($ExistingVolume) {
             $RemoveVolume = Read-Host "Remove Open WebUI data volume (deletes chat history)? (Y/N)"
             if ($RemoveVolume -eq 'Y' -or $RemoveVolume -eq 'y') {
                 try {
-                    Write-Verbose "Removing Docker volume 'open-webui-foundry'..."
-                    docker volume rm open-webui-foundry | Out-Null
-                    Write-Host "  Removed Docker volume 'open-webui-foundry'." -ForegroundColor Green
+                    Write-Verbose "Removing Docker volume '$VolumeName'..."
+                    docker volume rm $VolumeName | Out-Null
+                    Write-Host "  Removed Docker volume '$VolumeName'." -ForegroundColor Green
                 }
                 catch {
                     Write-Verbose "Failed to remove volume: $_"
@@ -184,6 +185,7 @@ if ($Cleanup) {
                 try {
                     Write-Verbose "Uninstalling Foundry Local via winget..."
                     winget uninstall Microsoft.FoundryLocal --accept-source-agreements
+                    if ($LASTEXITCODE -ne 0) { throw "winget uninstall exited with code $LASTEXITCODE" }
                     Write-Host "  Uninstalled Foundry Local." -ForegroundColor Green
                 }
                 catch {
@@ -195,6 +197,7 @@ if ($Cleanup) {
                 try {
                     Write-Verbose "Uninstalling Foundry Local via Homebrew..."
                     brew uninstall foundrylocal
+                    if ($LASTEXITCODE -ne 0) { throw "brew uninstall exited with code $LASTEXITCODE" }
                     Write-Host "  Uninstalled Foundry Local." -ForegroundColor Green
                 }
                 catch {
@@ -273,6 +276,7 @@ if (-not $SkipOpenWebUI) {
                     try {
                         Write-Verbose "Installing Docker Desktop via winget..."
                         winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
+                        if ($LASTEXITCODE -ne 0) { throw "winget install exited with code $LASTEXITCODE" }
                         Write-Verbose "Docker Desktop installed via winget."
                     }
                     catch {
@@ -284,6 +288,7 @@ if (-not $SkipOpenWebUI) {
                     try {
                         Write-Verbose "Installing Docker Desktop via Homebrew cask..."
                         brew install --cask docker
+                        if ($LASTEXITCODE -ne 0) { throw "brew install exited with code $LASTEXITCODE" }
                         Write-Verbose "Docker Desktop installed via Homebrew."
                     }
                     catch {
@@ -380,6 +385,7 @@ if (-not $FoundryInstalled) {
         try {
             Write-Verbose "Installing via winget..."
             winget install Microsoft.FoundryLocal --accept-source-agreements --accept-package-agreements
+            if ($LASTEXITCODE -ne 0) { throw "winget install exited with code $LASTEXITCODE" }
             Write-Verbose "Foundry Local installed via winget."
         }
         catch {
@@ -391,7 +397,9 @@ if (-not $FoundryInstalled) {
         try {
             Write-Verbose "Installing via Homebrew..."
             brew tap microsoft/foundrylocal
+            if ($LASTEXITCODE -ne 0) { throw "brew tap exited with code $LASTEXITCODE" }
             brew install foundrylocal
+            if ($LASTEXITCODE -ne 0) { throw "brew install exited with code $LASTEXITCODE" }
             Write-Verbose "Foundry Local installed via Homebrew."
         }
         catch {
@@ -451,6 +459,7 @@ else {
     try {
         Write-Verbose "Running 'foundry model download $Model'..."
         foundry model download $Model
+        if ($LASTEXITCODE -ne 0) { throw "foundry model download exited with code $LASTEXITCODE" }
         Write-Verbose "Model '$Model' downloaded successfully."
         Write-Host "Model '$Model' downloaded." -ForegroundColor Green
     }
@@ -465,6 +474,7 @@ Write-Host "Loading model '$Model' into Foundry Local service..." -ForegroundCol
 try {
     Write-Verbose "Running 'foundry model load $Model'..."
     foundry model load $Model
+    if ($LASTEXITCODE -ne 0) { throw "foundry model load exited with code $LASTEXITCODE" }
     Write-Verbose "Model '$Model' loaded successfully."
     Write-Host "Model '$Model' is ready." -ForegroundColor Green
 }
@@ -544,6 +554,7 @@ try {
     Write-Verbose "Pulling Open WebUI Docker image..."
     Write-Host "  Pulling Open WebUI image (this may take a moment)..." -ForegroundColor DarkGray
     docker pull $OpenWebUIImage
+    if ($LASTEXITCODE -ne 0) { throw "docker pull exited with code $LASTEXITCODE" }
     Write-Verbose "Open WebUI image pulled successfully."
 }
 catch {
@@ -561,10 +572,11 @@ try {
         -e "OPENAI_API_BASE_URLS=$FoundryDockerEndpoint" `
         -e "OPENAI_API_KEYS=OPENAI_API_KEY" `
         -e "WEBUI_AUTH=False" `
-        -v "open-webui-foundry:/app/backend/data" `
+        -v "$($VolumeName):/app/backend/data" `
         --name $ContainerName `
         --add-host "host.docker.internal:host-gateway" `
         $OpenWebUIImage | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "docker run exited with code $LASTEXITCODE" }
     Write-Verbose "Open WebUI container started."
 }
 catch {
