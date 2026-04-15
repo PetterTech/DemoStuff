@@ -117,8 +117,45 @@ if (-not $SkipOpenWebUI) {
                     throw
                 }
             }
-            Write-Host "Docker Desktop installed. Please launch it and wait for it to start, then re-run this script." -ForegroundColor Yellow
-            exit 0
+            # Launch Docker Desktop and wait for the engine to be ready
+            Write-Host "Starting Docker Desktop..." -ForegroundColor Cyan
+            if ($Platform -eq "Windows") {
+                $DockerPath = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+                if (Test-Path $DockerPath) {
+                    Start-Process $DockerPath
+                } else {
+                    Write-Verbose "Docker Desktop executable not found at expected path, trying shell start..."
+                    Start-Process "Docker Desktop"
+                }
+            }
+            elseif ($Platform -eq "macOS") {
+                open -a Docker
+            }
+
+            Write-Host "  Waiting for Docker engine to be ready..." -ForegroundColor DarkGray
+            $DockerMaxRetries = 60
+            $DockerRetry = 0
+            while ($DockerRetry -lt $DockerMaxRetries) {
+                try {
+                    $DockerVersion = docker version --format '{{.Server.Version}}' 2>$null
+                    if ($DockerVersion) {
+                        Write-Verbose "Docker engine is ready (version $DockerVersion)."
+                        $DockerReady = $true
+                        break
+                    }
+                }
+                catch {
+                    # Not ready yet
+                }
+                $DockerRetry++
+                Start-Sleep -Seconds 3
+            }
+
+            if (-not $DockerReady) {
+                Write-Error "Docker Desktop was installed but the engine did not start within 3 minutes. Please launch Docker Desktop manually and re-run this script."
+                exit 1
+            }
+            Write-Host "Docker Desktop is running." -ForegroundColor Green
         }
         else {
             Write-Host "Skipping Docker install. Use -SkipOpenWebUI to run Foundry Local without the web interface." -ForegroundColor DarkGray
