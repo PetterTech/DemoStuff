@@ -9,9 +9,8 @@ This demo uses [Microsoft Foundry Local](https://learn.microsoft.com/en-us/azure
 | Requirement | Windows | macOS |
 |---|---|---|
 | **PowerShell 7+** | [Install](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows) | [Install](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-macos) |
-| **Docker Desktop** | [Install](https://docs.docker.com/desktop/setup/install/windows-install/) | [Install](https://docs.docker.com/desktop/setup/install/mac-install/) |
 
-> **Note:** Foundry Local CLI is installed automatically by the script (`winget` on Windows, `brew` on macOS).
+> **Note:** Foundry Local and Docker Desktop (when needed) are installed automatically by the script (`winget` on Windows, `brew` on macOS).
 
 ## Quick Start
 
@@ -21,7 +20,7 @@ This demo uses [Microsoft Foundry Local](https://learn.microsoft.com/en-us/azure
 
 That's it. The script will:
 
-1. Install Foundry Local CLI (if not already installed)
+1. Install Foundry Local (if not already installed)
 2. Start the Foundry Local service
 3. Download and load the default model (`qwen2.5-0.5b`, ~500M params)
 4. Launch Open WebUI in a Docker container
