@@ -53,6 +53,7 @@ foundry model list
 | `-OpenWebUIPort` | `3000` | Local port for the web UI |
 | `-SkipOpenWebUI` | — | Only start Foundry Local (no web UI) |
 | `-Cleanup` | — | Stop and remove the local demo resources created by the script |
+| `-Force` | — | Skip all confirmation prompts during cleanup |
 
 ### Examples
 
@@ -97,7 +98,11 @@ foundry service ps
 Use the `-Cleanup` switch to stop and remove everything:
 
 ```powershell
+# Interactive cleanup (prompts for each component)
 .\deploy.ps1 -Cleanup
+
+# Remove everything without prompts
+.\deploy.ps1 -Cleanup -Force
 ```
 
 ## How It Works
@@ -120,6 +125,8 @@ Use the `-Cleanup` switch to stop and remove everything:
 - **Foundry Local** handles model management, hardware acceleration (GPU/NPU/CPU), and serves an OpenAI-compatible API
 - **Open WebUI** provides a polished chat interface that connects to the Foundry Local API
 - All data stays on your device — nothing is sent to the cloud
+
+> **Note:** The demo disables Open WebUI authentication (`WEBUI_AUTH=False`) for simplicity. Do not expose the web UI to untrusted networks without enabling authentication first.
 
 ## Links
 

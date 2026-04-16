@@ -34,6 +34,10 @@
     Open WebUI Docker container and volume, stops the Foundry Local service,
     and optionally uninstalls Foundry Local.
 
+.PARAMETER Force
+    When used with -Cleanup, skips all confirmation prompts and removes
+    everything without asking.
+
 .LINK
     https://learn.microsoft.com/en-us/azure/foundry-local/what-is-foundry-local
     https://github.com/microsoft/Foundry-Local
@@ -52,7 +56,10 @@ Param(
     [switch]$SkipOpenWebUI,
 
     [Parameter(HelpMessage = "Tear down the demo environment (remove containers, stop services)")]
-    [switch]$Cleanup
+    [switch]$Cleanup,
+
+    [Parameter(HelpMessage = "Skip all confirmation prompts during cleanup (remove everything)")]
+    [switch]$Force
 )
 
 #region Variables
@@ -102,8 +109,7 @@ if ($Cleanup) {
         # Remove Open WebUI Docker volume
         $ExistingVolume = docker volume ls --filter "name=$VolumeName" --format "{{.Name}}" 2>$null
         if ($ExistingVolume) {
-            $RemoveVolume = Read-Host "Remove Open WebUI data volume (deletes chat history)? (Y/N)"
-            if ($RemoveVolume -eq 'Y' -or $RemoveVolume -eq 'y') {
+            if ($Force -or (Read-Host "Remove Open WebUI data volume (deletes chat history)? (Y/N)") -match '^[Yy]$') {
                 try {
                     Write-Verbose "Removing Docker volume '$VolumeName'..."
                     docker volume rm $VolumeName | Out-Null
@@ -119,6 +125,26 @@ if ($Cleanup) {
             }
             else {
                 Write-Host "  Kept Docker volume (chat history preserved)." -ForegroundColor DarkGray
+            }
+        }
+
+        # Remove Open WebUI Docker image
+        $ExistingImage = docker images $OpenWebUIImage --format "{{.ID}}" 2>$null
+        if ($ExistingImage) {
+            if ($Force -or (Read-Host "Remove Open WebUI Docker image ($OpenWebUIImage)? (Y/N)") -match '^[Yy]$') {
+                try {
+                    Write-Verbose "Removing Docker image '$OpenWebUIImage'..."
+                    docker rmi $OpenWebUIImage | Out-Null
+                    if ($LASTEXITCODE -ne 0) { throw "docker rmi exited with code $LASTEXITCODE" }
+                    Write-Host "  Removed Docker image '$OpenWebUIImage'." -ForegroundColor Green
+                }
+                catch {
+                    Write-Verbose "Failed to remove Docker image: $_"
+                    Write-Host "  Could not remove Docker image." -ForegroundColor Yellow
+                }
+            }
+            else {
+                Write-Host "  Kept Docker image." -ForegroundColor DarkGray
             }
         }
     }
@@ -169,7 +195,7 @@ if ($Cleanup) {
 
     $EscapedModel = [regex]::Escape($Model)
     if ($CacheOutput -and $CacheOutput -match $EscapedModel) {
-        $RemoveModel = Read-Host "Remove cached model '$Model' from disk? (Y/N)"
+        $RemoveModel = if ($Force) { 'Y' } else { Read-Host "Remove cached model '$Model' from disk? (Y/N)" }
         if ($RemoveModel -eq 'Y' -or $RemoveModel -eq 'y') {
             try {
                 Write-Verbose "Removing model '$Model' from cache..."
@@ -200,7 +226,7 @@ if ($Cleanup) {
     # Uninstall Foundry Local
     $FoundryCmd = Get-Command foundry -ErrorAction SilentlyContinue
     if ($FoundryCmd) {
-        $RemoveFoundry = Read-Host "Uninstall Foundry Local? (Y/N)"
+        $RemoveFoundry = if ($Force) { 'Y' } else { Read-Host "Uninstall Foundry Local? (Y/N)" }
         if ($RemoveFoundry -eq 'Y' -or $RemoveFoundry -eq 'y') {
             Write-Verbose "Detecting operating system for uninstall..."
             if ($IsWindows) {
@@ -239,7 +265,7 @@ if ($Cleanup) {
     # Uninstall Docker Desktop
     $DockerCmd = Get-Command docker -ErrorAction SilentlyContinue
     if ($DockerCmd) {
-        $RemoveDocker = Read-Host "Uninstall Docker Desktop? (Y/N)"
+        $RemoveDocker = if ($Force) { 'Y' } else { Read-Host "Uninstall Docker Desktop? (Y/N)" }
         if ($RemoveDocker -eq 'Y' -or $RemoveDocker -eq 'y') {
             Write-Verbose "Detecting operating system for Docker uninstall..."
             if ($IsWindows) {
@@ -595,7 +621,7 @@ finally {
     Remove-Item $CacheTempOut, $CacheTempErr -ErrorAction SilentlyContinue
 }
 
-if ($CacheOutput | Select-String -SimpleMatch -Pattern $Model -Quiet) {
+if ($CacheOutput -and ($CacheOutput | Select-String -SimpleMatch -Pattern $Model -Quiet)) {
     Write-Verbose "Model '$Model' was found in the local cache."
     Write-Host "Model '$Model' is already downloaded." -ForegroundColor Green
 }
@@ -640,6 +666,7 @@ Write-Host "Getting Foundry Local endpoint..." -ForegroundColor Cyan
 try {
     Write-Verbose "Querying Foundry Local service status..."
     $ServiceOutput = foundry service status 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "foundry service status exited with code $LASTEXITCODE" }
     Write-Verbose "Service status output: $ServiceOutput"
 
     # Extract the endpoint URL exactly as reported by the service so the scheme and host are preserved.
