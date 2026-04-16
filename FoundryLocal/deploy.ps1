@@ -76,6 +76,11 @@ $OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.8.6"
 
 $ElapsedTime = [System.Diagnostics.Stopwatch]::StartNew()
 
+# Validate parameter combinations
+if ($Force -and -not $Cleanup) {
+    throw "The -Force parameter is only valid when -Cleanup is specified."
+}
+
 ########################################################################
 #                         Cleanup mode                                 #
 ########################################################################
@@ -689,9 +694,10 @@ try {
     Write-Verbose "Service status output: $ServiceOutput"
 
     # Extract the endpoint URL exactly as reported by the service so the scheme and host are preserved.
-    if ($ServiceOutput -match '(https?://[^/\s]+:(\d+))') {
+    if ($ServiceOutput -match '((https?)://[^/\s]+:(\d+))') {
         $FoundryEndpoint = $Matches[1]
-        $FoundryPort = $Matches[2]
+        $FoundryScheme = $Matches[2]
+        $FoundryPort = $Matches[3]
         Write-Verbose "Foundry Local endpoint detected from service status: $FoundryEndpoint"
         Write-Host "Foundry Local running at $FoundryEndpoint" -ForegroundColor Green
     }
@@ -724,16 +730,17 @@ if ($SkipOpenWebUI) {
 #                     Part 5 - Launch Open WebUI                       #
 ########################################################################
 
-# The Docker container needs to reach the host — use host.docker.internal
-$FoundryDockerEndpoint = "http://host.docker.internal:$FoundryPort/v1"
+# The Docker container needs to reach the host — use host.docker.internal with the detected scheme
+$FoundryDockerEndpoint = "$($FoundryScheme)://host.docker.internal:$FoundryPort/v1"
 
 Write-Host "Setting up Open WebUI..." -ForegroundColor Cyan
 
 # Remove any existing container with the same name
 try {
     Write-Verbose "Checking for existing '$ContainerName' container..."
-    $ExistingContainer = docker ps -a --filter "name=$ContainerName" --format '{{.Names}}' 2>$null
-    if ($ExistingContainer -eq $ContainerName) {
+    # Use an anchored filter so Docker only returns the exact container name
+    $ExistingContainerNames = @(docker ps -a --filter "name=^/$ContainerName$" --format '{{.Names}}' 2>$null)
+    if ($ExistingContainerNames -contains $ContainerName) {
         Write-Verbose "Removing existing container '$ContainerName'..."
         docker rm -f $ContainerName 2>$null | Out-Null
         if ($LASTEXITCODE -ne 0) {
@@ -765,7 +772,7 @@ catch {
 try {
     Write-Verbose "Starting Open WebUI container on port $OpenWebUIPort..."
     docker run -d `
-        -p "$($OpenWebUIPort):8080" `
+        -p "127.0.0.1:$($OpenWebUIPort):8080" `
         -e "OPENAI_API_BASE_URLS=$FoundryDockerEndpoint" `
         -e "OPENAI_API_KEYS=OPENAI_API_KEY" `
         -e "WEBUI_AUTH=False" `
