@@ -76,7 +76,7 @@ If the model dropdown is empty, add a Direct Connection manually:
 
 1. Open **Settings** → **Connections** → **Manage Direct Connections**
 2. Click **+**
-3. Set **URL** to `http://host.docker.internal:<PORT>/v1` (get the port from `foundry service status`)
+3. Set **URL** to match the scheme and port reported by `foundry service status`, using `host.docker.internal` as the host and appending `/v1` (for example, `http://host.docker.internal:<PORT>/v1` or `https://host.docker.internal:<PORT>/v1`)
 4. Set **Auth** to **None**
 5. Click **Save**
 

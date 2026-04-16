@@ -829,7 +829,7 @@ Write-Host " Model      : $Model" -ForegroundColor White
 Write-Host ""
 Write-Host " If the model does not appear in Open WebUI," -ForegroundColor DarkGray
 Write-Host " add a Direct Connection in Settings > Connections:" -ForegroundColor DarkGray
-Write-Host "   URL : http://host.docker.internal:$FoundryPort/v1" -ForegroundColor DarkGray
+Write-Host "   URL : $FoundryDockerEndpoint/v1" -ForegroundColor DarkGray
 Write-Host "   Auth: None" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host " To stop: docker rm -f $ContainerName && foundry service stop" -ForegroundColor DarkGray
