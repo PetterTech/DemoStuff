@@ -327,8 +327,26 @@ if (-not $SkipOpenWebUI) {
     Write-Verbose "Checking for Docker..."
     $DockerReady = $false
 
-    # First check if docker CLI is available
+    # First check if docker CLI is available (PATH, then well-known install locations)
     $DockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if (-not $DockerCmd) {
+        Write-Verbose "Docker CLI not found in PATH, checking well-known install locations..."
+        $WellKnownPaths = if ($IsWindows) {
+            @("$env:ProgramFiles\Docker\Docker\resources\bin\docker.exe")
+        } else {
+            @("/usr/local/bin/docker", "/opt/homebrew/bin/docker",
+              "/Applications/Docker.app/Contents/Resources/bin/docker")
+        }
+        foreach ($DockerPath in $WellKnownPaths) {
+            if (Test-Path $DockerPath) {
+                Write-Verbose "Found Docker at well-known path: $DockerPath"
+                $ParentDir = Split-Path $DockerPath -Parent
+                $env:PATH = "$ParentDir$([System.IO.Path]::PathSeparator)$env:PATH"
+                $DockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+                break
+            }
+        }
+    }
     if ($DockerCmd) {
         Write-Verbose "Docker CLI found at $($DockerCmd.Source)."
         # Then check if the engine is running
@@ -367,7 +385,8 @@ if (-not $SkipOpenWebUI) {
                     try {
                         Write-Verbose "Installing Docker Desktop via winget..."
                         winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
-                        if ($LASTEXITCODE -ne 0) { throw "winget install exited with code $LASTEXITCODE" }
+                        # winget returns -1978335189 when the package is already installed with no upgrade available
+                        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1978335189) { throw "winget install exited with code $LASTEXITCODE" }
                         Write-Verbose "Docker Desktop installed via winget."
                     }
                     catch {
@@ -484,7 +503,7 @@ if (-not $FoundryInstalled) {
         try {
             Write-Verbose "Installing via winget..."
             winget install Microsoft.FoundryLocal --accept-source-agreements --accept-package-agreements
-            if ($LASTEXITCODE -ne 0) { throw "winget install exited with code $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1978335189) { throw "winget install exited with code $LASTEXITCODE" }
             Write-Verbose "Foundry Local installed via winget."
         }
         catch {
