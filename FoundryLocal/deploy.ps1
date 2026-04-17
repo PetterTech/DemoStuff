@@ -327,6 +327,65 @@ if ($IsWindows) {
 }
 Write-Verbose "Running on $Platform."
 
+# Check hardware virtualization support (required for Docker / Open WebUI)
+if (-not $SkipOpenWebUI) {
+    Write-Verbose "Checking hardware virtualization support..."
+    $VirtualizationSupported = $true
+
+    if ($IsWindows) {
+        try {
+            $Processor = Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop
+            $VirtualizationFirmwareEnabledValues = @($Processor | Select-Object -ExpandProperty VirtualizationFirmwareEnabled -ErrorAction SilentlyContinue)
+            $ReportedVirtualizationFirmwareEnabledValues = @($VirtualizationFirmwareEnabledValues | Where-Object { $null -ne $_ })
+
+            if ($ReportedVirtualizationFirmwareEnabledValues.Count -eq 0) {
+                Write-Verbose "CPU virtualization status could not be determined because VirtualizationFirmwareEnabled was not reported."
+            }
+            elseif ($ReportedVirtualizationFirmwareEnabledValues -contains $false) {
+                $VirtualizationSupported = $false
+                Write-Verbose "CPU virtualization is not enabled in BIOS/UEFI."
+            }
+            else {
+                Write-Verbose "CPU virtualization is enabled."
+            }
+        }
+        catch {
+            Write-Verbose "Could not determine virtualization status: $_"
+        }
+    }
+    elseif ($IsMacOS) {
+        $SysctlOutput = sysctl -n kern.hv_support 2>$null
+        $SysctlExitCode = $LASTEXITCODE
+        $SysctlOutput = "$SysctlOutput".Trim()
+
+        if ($SysctlExitCode -eq 0 -and $SysctlOutput -eq "1") {
+            Write-Verbose "Hypervisor support is available."
+        }
+        elseif ($SysctlExitCode -eq 0 -and $SysctlOutput -eq "0") {
+            $VirtualizationSupported = $false
+            Write-Verbose "Hypervisor support is not available on this Mac."
+        }
+        else {
+            Write-Verbose "Could not determine virtualization status."
+        }
+    }
+
+    if (-not $VirtualizationSupported) {
+        Write-Host "Hardware virtualization is not enabled on this system." -ForegroundColor Yellow
+        Write-Host "  Docker (required for Open WebUI) needs virtualization support." -ForegroundColor Yellow
+        Write-Host "  You can enable it in your BIOS/UEFI settings, or continue without Open WebUI." -ForegroundColor DarkGray
+        $ContinueWithout = Read-Host "Continue without Open WebUI? (Y/N)"
+        if ($ContinueWithout -eq 'Y' -or $ContinueWithout -eq 'y') {
+            Write-Verbose "User chose to continue without Open WebUI."
+            $SkipOpenWebUI = [switch]::new($true)
+        }
+        else {
+            Write-Host "Enable virtualization in BIOS/UEFI and re-run this script." -ForegroundColor DarkGray
+            exit 1
+        }
+    }
+}
+
 # Check Docker (required for Open WebUI)
 if (-not $SkipOpenWebUI) {
     Write-Verbose "Checking for Docker..."
