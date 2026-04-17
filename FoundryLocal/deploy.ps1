@@ -354,18 +354,19 @@ if (-not $SkipOpenWebUI) {
         }
     }
     elseif ($IsMacOS) {
-        try {
-            $SysctlOutput = sysctl -n kern.hv_support 2>$null
-            if ($SysctlOutput -ne "1") {
-                $VirtualizationSupported = $false
-                Write-Verbose "Hypervisor support is not available on this Mac."
-            }
-            else {
-                Write-Verbose "Hypervisor support is available."
-            }
+        $SysctlOutput = sysctl -n kern.hv_support 2>$null
+        $SysctlExitCode = $LASTEXITCODE
+        $SysctlOutput = "$SysctlOutput".Trim()
+
+        if ($SysctlExitCode -eq 0 -and $SysctlOutput -eq "1") {
+            Write-Verbose "Hypervisor support is available."
         }
-        catch {
-            Write-Verbose "Could not determine virtualization status: $_"
+        elseif ($SysctlExitCode -eq 0 -and $SysctlOutput -eq "0") {
+            $VirtualizationSupported = $false
+            Write-Verbose "Hypervisor support is not available on this Mac."
+        }
+        else {
+            Write-Verbose "Could not determine virtualization status."
         }
     }
 
