@@ -335,7 +335,13 @@ if (-not $SkipOpenWebUI) {
     if ($IsWindows) {
         try {
             $Processor = Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop
-            if (-not $Processor.VirtualizationFirmwareEnabled) {
+            $VirtualizationFirmwareEnabledValues = @($Processor | Select-Object -ExpandProperty VirtualizationFirmwareEnabled -ErrorAction SilentlyContinue)
+            $ReportedVirtualizationFirmwareEnabledValues = @($VirtualizationFirmwareEnabledValues | Where-Object { $null -ne $_ })
+
+            if ($ReportedVirtualizationFirmwareEnabledValues.Count -eq 0) {
+                Write-Verbose "CPU virtualization status could not be determined because VirtualizationFirmwareEnabled was not reported."
+            }
+            elseif ($ReportedVirtualizationFirmwareEnabledValues -contains $false) {
                 $VirtualizationSupported = $false
                 Write-Verbose "CPU virtualization is not enabled in BIOS/UEFI."
             }
