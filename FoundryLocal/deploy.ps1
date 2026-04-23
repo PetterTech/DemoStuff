@@ -446,16 +446,17 @@ if (-not $SkipOpenWebUI) {
                         Write-Error "winget is required to install Docker Desktop but was not found. Install winget from https://learn.microsoft.com/en-us/windows/package-manager/winget/ and re-run this script."
                         exit 1
                     }
-                    $CurrentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-                    if (-not $CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-                        Write-Error "Installing Docker Desktop requires administrator privileges. Please re-run this script from an elevated (Run as Administrator) PowerShell prompt."
-                        exit 1
-                    }
                     try {
-                        Write-Verbose "Installing Docker Desktop via winget..."
-                        winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
+                        Write-Verbose "Installing Docker Desktop via winget (elevated)..."
+                        # Docker Desktop 4.40+ requires winget itself to run as admin — spawning an elevated
+                        # installer subprocess via UAC is no longer sufficient. Start-Process -Verb RunAs
+                        # elevates winget directly and triggers a single UAC prompt if needed.
+                        $WingetPath = (Get-Command winget -ErrorAction Stop).Source
+                        $WingetArgs = "install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements"
+                        $Process = Start-Process -FilePath $WingetPath -ArgumentList $WingetArgs -Verb RunAs -Wait -PassThru -ErrorAction Stop
+                        $ExitCode = $Process.ExitCode
                         # winget returns -1978335189 when the package is already installed with no upgrade available
-                        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1978335189) { throw "winget install exited with code $LASTEXITCODE" }
+                        if ($ExitCode -ne 0 -and $ExitCode -ne -1978335189) { throw "winget install exited with code $ExitCode" }
                         Write-Verbose "Docker Desktop installed via winget."
                     }
                     catch {
