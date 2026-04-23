@@ -446,6 +446,11 @@ if (-not $SkipOpenWebUI) {
                         Write-Error "winget is required to install Docker Desktop but was not found. Install winget from https://learn.microsoft.com/en-us/windows/package-manager/winget/ and re-run this script."
                         exit 1
                     }
+                    $CurrentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+                    if (-not $CurrentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+                        Write-Error "Installing Docker Desktop requires administrator privileges. Please re-run this script from an elevated (Run as Administrator) PowerShell prompt."
+                        exit 1
+                    }
                     try {
                         Write-Verbose "Installing Docker Desktop via winget..."
                         winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements
