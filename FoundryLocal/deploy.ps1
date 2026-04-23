@@ -346,7 +346,22 @@ if (-not $SkipOpenWebUI) {
                 Write-Verbose "CPU virtualization is not enabled in BIOS/UEFI."
             }
             else {
-                Write-Verbose "CPU virtualization is enabled."
+                Write-Verbose "CPU virtualization is enabled in BIOS/UEFI."
+            }
+
+            # VT-x in BIOS is necessary but not sufficient — Docker Desktop also requires
+            # Hyper-V or WSL2 to be enabled as a Windows feature. HypervisorPresent reflects
+            # whether a hypervisor is actually running, catching cases where VT-x is on but
+            # neither Hyper-V nor WSL2 has been enabled.
+            if ($VirtualizationSupported) {
+                $ComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop
+                if (-not $ComputerSystem.HypervisorPresent) {
+                    $VirtualizationSupported = $false
+                    Write-Verbose "Hypervisor is not running. Hyper-V or WSL2 must be enabled for Docker Desktop."
+                }
+                else {
+                    Write-Verbose "Hypervisor is present and active."
+                }
             }
         }
         catch {
@@ -371,16 +386,19 @@ if (-not $SkipOpenWebUI) {
     }
 
     if (-not $VirtualizationSupported) {
-        Write-Host "Hardware virtualization is not enabled on this system." -ForegroundColor Yellow
+        Write-Host "Hardware virtualization is not available on this system." -ForegroundColor Yellow
         Write-Host "  Docker (required for Open WebUI) needs virtualization support." -ForegroundColor Yellow
-        Write-Host "  You can enable it in your BIOS/UEFI settings, or continue without Open WebUI." -ForegroundColor DarkGray
+        if ($IsWindows) {
+            Write-Host "  Ensure VT-x/AMD-V is enabled in BIOS/UEFI and that Hyper-V or WSL2 is" -ForegroundColor DarkGray
+            Write-Host "  enabled as a Windows feature (Settings > Optional features > More Windows features)." -ForegroundColor DarkGray
+        }
+        Write-Host "  You can also continue without Open WebUI using -SkipOpenWebUI." -ForegroundColor DarkGray
         $ContinueWithout = Read-Host "Continue without Open WebUI? (Y/N)"
         if ($ContinueWithout -eq 'Y' -or $ContinueWithout -eq 'y') {
             Write-Verbose "User chose to continue without Open WebUI."
             $SkipOpenWebUI = [switch]::new($true)
         }
         else {
-            Write-Host "Enable virtualization in BIOS/UEFI and re-run this script." -ForegroundColor DarkGray
             exit 1
         }
     }
