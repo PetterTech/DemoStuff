@@ -66,7 +66,7 @@ Param(
 
 $ContainerName = "open-webui-foundry"
 $VolumeName = "open-webui-foundry"
-$OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.8.6"
+$OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.9.1"
 
 #endregion Variables
 
