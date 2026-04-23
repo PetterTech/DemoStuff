@@ -349,15 +349,15 @@ if (-not $SkipOpenWebUI) {
                 Write-Verbose "CPU virtualization is enabled in BIOS/UEFI."
             }
 
-            # VT-x in BIOS is necessary but not sufficient — Docker Desktop also requires
-            # Hyper-V or WSL2 to be enabled as a Windows feature. HypervisorPresent reflects
-            # whether a hypervisor is actually running, catching cases where VT-x is on but
-            # neither Hyper-V nor WSL2 has been enabled.
+            # VT-x in BIOS is necessary but not sufficient for Docker Desktop on Windows.
+            # HypervisorPresent only indicates whether Windows is currently running with a
+            # hypervisor active; it does not by itself confirm that specific optional
+            # features such as Hyper-V or WSL2 are enabled.
             if ($VirtualizationSupported) {
                 $ComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop
                 if (-not $ComputerSystem.HypervisorPresent) {
                     $VirtualizationSupported = $false
-                    Write-Verbose "Hypervisor is not running. Hyper-V or WSL2 must be enabled for Docker Desktop."
+                    Write-Verbose "Hypervisor is not running. Required Windows virtualization features may not be enabled or active for Docker Desktop."
                 }
                 else {
                     Write-Verbose "Hypervisor is present and active."
@@ -399,6 +399,12 @@ if (-not $SkipOpenWebUI) {
             $SkipOpenWebUI = [switch]::new($true)
         }
         else {
+            Write-Host "Please enable the required virtualization support" -NoNewline -ForegroundColor Yellow
+            if ($IsWindows) {
+                Write-Host " (including Hyper-V or WSL2, if applicable)" -NoNewline -ForegroundColor Yellow
+            }
+            Write-Host " and then re-run this script." -ForegroundColor Yellow
+            Write-Host "Alternatively, re-run with -SkipOpenWebUI to proceed without the chat interface." -ForegroundColor DarkGray
             exit 1
         }
     }
