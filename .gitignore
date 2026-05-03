@@ -1,3 +1,6 @@
 .terraform*
 terraform.tfvars
 terraform.tfstate*
+
+# Crossplane generated manifests can contain environment-specific identifiers.
+Crossplane/.generated/
