@@ -1,0 +1,120 @@
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-patch-and-transform
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.8.2
+---
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: storageaccounts.platform.example.org
+spec:
+  group: platform.example.org
+  names:
+    kind: StorageAccount
+    plural: storageaccounts
+  defaultCompositionRef:
+    name: storageaccounts.azure.storage.platform.example.org
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Storage name.
+                    minLength: 3
+                    maxLength: 24
+                    pattern: '^[a-z0-9]+$'
+                  geoRedundant:
+                    type: boolean
+                    description: Whether the backing implementation should use geo-redundant replication.
+                  tags:
+                    type: object
+                    description: Arbitrary tags to apply to the backing storage account.
+                    additionalProperties:
+                      type: string
+                required:
+                - name
+                - geoRedundant
+            required:
+            - parameters
+          status:
+            type: object
+            properties:
+              accountName:
+                type: string
+    additionalPrinterColumns:
+    - name: Name
+      type: string
+      jsonPath: .spec.parameters.name
+    - name: Geo
+      type: string
+      jsonPath: .spec.parameters.geoRedundant
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: storageaccounts.azure.storage.platform.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: StorageAccount
+  mode: Pipeline
+  pipeline:
+  - step: patch-and-transform
+    functionRef:
+      name: function-patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources:
+      - name: storage-account
+        base:
+          apiVersion: storage.azure.m.upbound.io/v1beta1
+          kind: Account
+          spec:
+            forProvider:
+              accountKind: StorageV2
+              accountTier: Standard
+              accountReplicationType: ZRS
+              location: swedencentral
+              resourceGroupName: rg-crossplanedemo
+              tags: {}
+            providerConfigRef:
+              kind: ClusterProviderConfig
+              name: default
+        patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.name
+          toFieldPath: metadata.annotations["crossplane.io/external-name"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.tags
+          toFieldPath: spec.forProvider.tags
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.geoRedundant
+          toFieldPath: spec.forProvider.accountReplicationType
+          transforms:
+          - type: convert
+            convert:
+              toType: string
+          - type: map
+            map:
+              "true": GRS
+              "false": ZRS
+        - type: ToCompositeFieldPath
+          fromFieldPath: metadata.annotations["crossplane.io/external-name"]
+          toFieldPath: status.accountName
+---
