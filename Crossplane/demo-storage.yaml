@@ -1,0 +1,23 @@
+apiVersion: platform.example.org/v1alpha1
+kind: StorageAccount
+metadata:
+  name: zone-storage-account
+spec:
+  parameters:
+    name: democrossplane123zone
+    geoRedundant: false
+    tags:
+      environment: demo
+      owner: platform
+---
+apiVersion: platform.example.org/v1alpha1
+kind: StorageAccount
+metadata:
+  name: geo-storage-account
+spec:
+  parameters:
+    name: democrossplane123geo
+    geoRedundant: true
+    tags:
+      environment: demo
+      owner: platform
