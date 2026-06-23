@@ -39,7 +39,7 @@ Crossplane/
 **Kubernetes (YAML manifests):**
 - Crossplane (via Helm)
 - Upbound Azure provider family (`provider-family-azure`)
-- ProviderConfig using Azure Workload Identity
+- ClusterProviderConfig using Azure Workload Identity
 
 ## Prerequisites
 
@@ -67,7 +67,7 @@ When the script finishes, Crossplane is fully operational and ready to manage Az
 
 ```powershell
 kubectl apply -f .generated/examples/storage-account.yaml
-kubectl get account.storage.azure.upbound.io -w
+kubectl get accounts.storage.azure.m.upbound.io -w
 ```
 
 This creates a real Azure Storage Account (Standard LRS, Sweden Central) managed by Crossplane. Once `READY=True` and `SYNCED=True`, the account exists in Azure. Delete the manifest to have Crossplane remove it automatically.
@@ -203,7 +203,7 @@ Wait for the provider to become healthy:
 kubectl get providers.pkg.crossplane.io -w
 ```
 
-### 5.3 Create a ProviderConfig
+### 5.3 Create a ClusterProviderConfig
 
 ```powershell
 kubectl apply -f kubernetes/providers/provider-config.yaml
@@ -215,8 +215,8 @@ kubectl apply -f kubernetes/providers/provider-config.yaml
 # Provider should show INSTALLED=True and HEALTHY=True
 kubectl get providers.pkg.crossplane.io
 
-# ProviderConfig should exist
-kubectl get providerconfigs.azure.upbound.io
+# ClusterProviderConfig should exist
+kubectl get clusterproviderconfigs.azure.m.upbound.io
 ```
 
 ## 7. Try it out — create a Storage Account
@@ -242,7 +242,7 @@ kubectl apply -f kubernetes/examples/storage-account.yaml
 Watch it provision:
 
 ```powershell
-kubectl get account.storage.azure.upbound.io -w
+kubectl get accounts.storage.azure.m.upbound.io -w
 ```
 
 Once `READY` is `True` and `SYNCED` is `True`, the storage account exists in Azure. You can verify with:

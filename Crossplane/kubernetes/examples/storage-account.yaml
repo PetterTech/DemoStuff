@@ -1,4 +1,4 @@
-apiVersion: storage.azure.upbound.io/v1beta2
+apiVersion: storage.azure.m.upbound.io/v1beta1
 kind: Account
 metadata:
   name: <STORAGE_ACCOUNT_NAME>
@@ -9,4 +9,5 @@ spec:
     accountTier: Standard
     accountReplicationType: LRS
   providerConfigRef:
+    kind: ClusterProviderConfig
     name: default
