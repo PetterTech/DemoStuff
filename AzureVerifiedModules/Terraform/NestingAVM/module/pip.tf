@@ -10,7 +10,7 @@ variable "resource_group_name" {
 
 module "avm-res-network-publicipaddress" {
   source  = "Azure/avm-res-network-publicipaddress/azurerm"
-  version = "0.2.0"
+  version = "0.2.1"
   location = var.location
   resource_group_name = var.resource_group_name
   name = var.name

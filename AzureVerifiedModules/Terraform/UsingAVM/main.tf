@@ -9,7 +9,7 @@ provider "azurerm" {
 
 module "avm-res-network-publicipaddress" {
   source  = "Azure/avm-res-network-publicipaddress/azurerm"
-  version = "0.2.0"
+  version = "0.2.1"
   location = "swedencentral"
   resource_group_name = "TerraformDemo-rg"
   name = "myavmpublicip-pip"
