@@ -216,7 +216,7 @@ kubectl apply -f kubernetes/providers/provider-config.yaml
 kubectl get providers.pkg.crossplane.io
 
 # ClusterProviderConfig should exist
-kubectl get clusterproviderconfigs.azure.upbound.io
+kubectl get clusterproviderconfigs.azure.m.upbound.io
 ```
 
 ## 7. Try it out — create a Storage Account
