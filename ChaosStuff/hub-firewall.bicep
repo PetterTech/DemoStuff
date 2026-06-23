@@ -15,7 +15,7 @@ resource publicIP 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
   }
 }
 
-resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' = {
+resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-11-01' = {
   name: 'hub-AzureFirewallPolicy'
   location: location
   properties: {

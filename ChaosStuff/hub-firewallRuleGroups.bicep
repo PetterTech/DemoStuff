@@ -2,7 +2,7 @@ param firewallPolicyName string
 param spoke1ipgroupID string
 param spoke2ipgroupID string
 
-resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' existing = {
+resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-11-01' existing = {
   name: firewallPolicyName
 }
 
