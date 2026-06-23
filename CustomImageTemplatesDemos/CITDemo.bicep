@@ -70,7 +70,7 @@ resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
   }
 }
 
-resource bastion 'Microsoft.Network/bastionHosts@2023-09-01' = {
+resource bastion 'Microsoft.Network/bastionHosts@2023-11-01' = {
   name: 'CITDemo-bastion'
   location: location
   sku: {
