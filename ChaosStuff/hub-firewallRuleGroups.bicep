@@ -6,7 +6,7 @@ resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' existing
   name: firewallPolicyName
 }
 
-resource coreRuleGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01' = {
+resource coreRuleGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-11-01' = {
   name: 'coreRuleGroup'
   parent: firewallPolicy
   properties: {
