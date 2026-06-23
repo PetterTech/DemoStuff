@@ -2,7 +2,7 @@ param clusterName string
 param location string
 param clusterAdminPrincipalId string
 
-resource aks 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' = {
+resource aks 'Microsoft.ContainerService/managedClusters@2024-10-01' = {
   name: clusterName
   location: location
   sku: {
