@@ -59,7 +59,7 @@ spec:
       type: string
       jsonPath: .spec.parameters.name
     - name: Geo
-      type: string
+      type: boolean
       jsonPath: .spec.parameters.geoRedundant
 ---
 apiVersion: apiextensions.crossplane.io/v1
