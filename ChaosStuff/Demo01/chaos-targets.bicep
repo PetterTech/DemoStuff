@@ -2,15 +2,15 @@ param location string = resourceGroup().location
 param projectName string
 param managedIdentityClientId string
 
-resource vm1 'Microsoft.Compute/virtualMachines@2024-03-01' existing = {
+resource vm1 'Microsoft.Compute/virtualMachines@2024-07-01' existing = {
   name: '${projectName}-vm1'
 }
 
-resource vm2 'Microsoft.Compute/virtualMachines@2024-03-01' existing = {
+resource vm2 'Microsoft.Compute/virtualMachines@2024-07-01' existing = {
   name: '${projectName}-vm2'
 }
 
-resource vm3 'Microsoft.Compute/virtualMachines@2024-03-01' existing = {
+resource vm3 'Microsoft.Compute/virtualMachines@2024-07-01' existing = {
   name: '${projectName}-vm3'
 }
 
