@@ -49,7 +49,7 @@ resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-09-01' = {
   }
 }
 
-resource spoke1ipgroup 'Microsoft.Network/ipGroups@2023-09-01' = {
+resource spoke1ipgroup 'Microsoft.Network/ipGroups@2023-11-01' = {
   name: 'spoke1ipgroup'
   location: location
   properties: {
@@ -59,7 +59,7 @@ resource spoke1ipgroup 'Microsoft.Network/ipGroups@2023-09-01' = {
   }
 }
 
-resource spoke2ipgroup 'Microsoft.Network/ipGroups@2023-09-01' = {
+resource spoke2ipgroup 'Microsoft.Network/ipGroups@2023-11-01' = {
   name: 'spoke2ipgroup'
   location: location
   properties: {
