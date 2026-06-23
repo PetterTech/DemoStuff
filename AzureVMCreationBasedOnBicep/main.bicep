@@ -34,7 +34,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
   }
 }
 
-resource vm 'Microsoft.Compute/virtualMachines@2021-07-01' = {
+resource vm 'Microsoft.Compute/virtualMachines@2021-11-01' = {
   name: vmName
   location: location
     tags: {
