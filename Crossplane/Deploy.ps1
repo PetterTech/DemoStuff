@@ -452,7 +452,7 @@ Write-Verbose "All done. Elapsed time: $($ElapsedTime.Elapsed.ToString())."
 Write-Host ''
 Write-Host 'Crossplane is ready. To test with a Storage Account:' -ForegroundColor Green
 Write-Host "  kubectl apply -f $GeneratedDir/examples/storage-account.yaml"
-Write-Host '  kubectl get accounts.storage.azure.m.upbound.io -n upbound-system -w'
+Write-Host '  kubectl get accounts.storage.azure.m.upbound.io -w'
 Write-Host ''
 Write-Host 'To clean up everything:'
 Write-Host "  .\Deploy.ps1 -Cleanup"

@@ -67,7 +67,7 @@ When the script finishes, Crossplane is fully operational and ready to manage Az
 
 ```powershell
 kubectl apply -f .generated/examples/storage-account.yaml
-kubectl get accounts.storage.azure.m.upbound.io -n upbound-system -w
+kubectl get accounts.storage.azure.m.upbound.io -w
 ```
 
 This creates a real Azure Storage Account (Standard LRS, Sweden Central) managed by Crossplane. Once `READY=True` and `SYNCED=True`, the account exists in Azure. Delete the manifest to have Crossplane remove it automatically.
@@ -242,7 +242,7 @@ kubectl apply -f kubernetes/examples/storage-account.yaml
 Watch it provision:
 
 ```powershell
-kubectl get accounts.storage.azure.m.upbound.io -n upbound-system -w
+kubectl get accounts.storage.azure.m.upbound.io -w
 ```
 
 Once `READY` is `True` and `SYNCED` is `True`, the storage account exists in Azure. You can verify with:
