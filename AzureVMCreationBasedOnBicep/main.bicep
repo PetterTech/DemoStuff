@@ -12,7 +12,7 @@ param imageVersion string
 param imagePublisher string
 param subnetID string
 
-resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
+resource nic 'Microsoft.Network/networkInterfaces@2021-08-01' = {
   name: 'nic-${vmName}'
   location: location
   tags: {
