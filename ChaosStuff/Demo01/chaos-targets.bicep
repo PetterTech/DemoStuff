@@ -53,7 +53,7 @@ resource chaosServiceTarget3 'Microsoft.Chaos/targets@2024-03-22-preview' = {
   }
 }
 
-resource vm1ChaosAgent 'Microsoft.Compute/virtualMachines/extensions@2024-07-01' = {
+resource vm1ChaosAgent 'Microsoft.Compute/virtualMachines/extensions@2024-11-01' = {
   name: 'ChaosAgent'
   location: location
   parent: vm1
