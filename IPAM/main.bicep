@@ -2,7 +2,7 @@ targetScope = 'resourceGroup'
 
 param location string = resourceGroup().location
 
-resource vnetmanager 'Microsoft.Network/networkManagers@2024-05-01' = {
+resource vnetmanager 'Microsoft.Network/networkManagers@2024-10-01' = {
   name: 'vnm-demoManager'
   location: location
   properties: {
