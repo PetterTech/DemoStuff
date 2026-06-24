@@ -11,7 +11,7 @@ resource natPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
   }
 }
 
-resource natGateway 'Microsoft.Network/natGateways@2023-09-01' = {
+resource natGateway 'Microsoft.Network/natGateways@2023-11-01' = {
   name: 'ng-natGateway'
   location: location
   sku: {
