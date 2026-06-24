@@ -14,7 +14,7 @@ resource natGatewayPublicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-
     idleTimeoutInMinutes: 4
   }
 }
-resource natGateway 'Microsoft.Network/natGateways@2021-05-01' = {
+resource natGateway 'Microsoft.Network/natGateways@2021-08-01' = {
   name: natGatewayName
   location: location
   sku: {
