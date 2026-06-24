@@ -27,7 +27,7 @@ resource ipampool 'Microsoft.Network/networkManagers/ipamPools@2024-01-01-previe
   }
 }
 
-resource staticcidr 'Microsoft.Network/networkManagers/ipamPools/staticCidrs@2024-01-01-preview' = {
+resource staticcidr 'Microsoft.Network/networkManagers/ipamPools/staticCidrs@2024-05-01' = {
   name: 'OnPremCIDR'
   parent: ipampool
   properties: {
