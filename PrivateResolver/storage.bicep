@@ -30,7 +30,7 @@ resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01
   }
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-09-01' = {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
   name: 'private'
   location: location
   properties: {
