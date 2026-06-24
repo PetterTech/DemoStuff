@@ -15,7 +15,7 @@ resource natGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
   }
 }
 
-resource natGateway 'Microsoft.Network/natGateways@2023-09-01' = {
+resource natGateway 'Microsoft.Network/natGateways@2023-11-01' = {
   name: 'CITDemo-natgateway'
   location: location
   sku: {
