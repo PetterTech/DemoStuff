@@ -5,7 +5,7 @@ param username string
 @secure()
 param password string
 
-resource nic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
+resource nic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: 'labvmnic'
   location: myLocation
   properties: {

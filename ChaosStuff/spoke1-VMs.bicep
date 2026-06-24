@@ -4,7 +4,7 @@ param localAdminUsername string
 param localAdminPassword string
 param spoke1subnetID string
 
-resource Spoke1VM1Nic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
+resource Spoke1VM1Nic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: 'nic-spoke1vm1'
   location: location
   properties: {

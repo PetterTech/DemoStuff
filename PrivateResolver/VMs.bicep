@@ -5,7 +5,7 @@ param localAdminPassword string
 param onpremsubnetID string
 param spokesubnetID string
 
-resource OnPremVMNic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
+resource OnPremVMNic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: 'OnPremVMNic'
   location: location
   properties: {
@@ -24,7 +24,7 @@ resource OnPremVMNic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
   }
 }
 
-resource SpokeVMNic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
+resource SpokeVMNic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: 'SpokeVMNic'
   location: location
   properties: {
