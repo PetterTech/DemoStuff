@@ -1,7 +1,7 @@
 param location string
 param bastionSubnetId string
 
-resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
+resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2021-05-01' = {
   name: 'pip-labBastion'
   location: location
   sku: {
