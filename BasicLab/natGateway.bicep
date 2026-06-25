@@ -1,6 +1,6 @@
 param location string
 
-resource natPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
+resource natPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: 'pip-natGateway'
   location: location
   sku: {

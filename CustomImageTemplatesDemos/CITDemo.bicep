@@ -4,7 +4,7 @@ targetScope = 'resourceGroup'
 param groupID string
 param location string = 'northeurope'
 
-resource natGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
+resource natGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: 'CITDemo-natgateway-pip'
   location: location
   sku: {
@@ -59,7 +59,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   }
 }
 
-resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
+resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: 'CITDemo-bastion-pip'
   location: location
   sku: {
