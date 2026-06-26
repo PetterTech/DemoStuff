@@ -2,7 +2,7 @@ param location string
 param natGatewayPublicIPAddressName string
 param natGatewayName string
 
-resource natGatewayPublicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-01' = {
+resource natGatewayPublicIPAddress 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
   name: natGatewayPublicIPAddressName
   location: location
   sku: {
