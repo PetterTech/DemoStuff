@@ -1,6 +1,6 @@
 param location string
 
-resource onpremvnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
+resource onpremvnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'Onprem'
   location: location
   properties: {
