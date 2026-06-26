@@ -1,0 +1,25 @@
+gantt
+    title Chronologie des événements concernant le bien immobilier
+    dateFormat  DD-MM-YYYY
+    axisFormat  %d-%m-%Y
+
+    section Acquisition et emprunts avant mariage
+    Acquisition du bien en indivision : milestone, a1, 01-05-1990, 1d
+    Frais Agence et Notaire réglés par M. HUMBERT : milestone, a2, 01-05-1990, 1d
+    Emprunt UCB, durée 15 ans : milestone, a3, 01-05-1990, 1d
+    Mariage : milestone, a4, 29-12-1990, 1d
+
+    section Événements après mariage
+    FIN cont. Ch. Mariage Mme BRULE ⚠️ : milestone, b1, 18-05-1995, 1d
+    Renégociation emprunt UCB : milestone, b2, 10-10-1995, 1d
+    Séparation : milestone, b3, 04-01-1996, 1d
+    ONC : milestone, b4, 10-06-1996, 1d
+    Divorce : milestone, b5, 15-05-1998, 1d
+    Vente du bien : milestone, b6, 23-08-2001, 1d
+    
+    section Remboursements
+    Remb. par M. HUMBERT du 10/05/1990 au 28/12/1990 : active, c1, 10-05-1990, 28-12-1990
+    Crédit UCB : active, c2, 01-05-1990, 01-10-1997
+    Crédit BRO : active, c3, 01-11-1997, 23-08-2001
+    Remb. Emp. BRO M. HUMBERT : active, c4, 01-11-1997, 23-08-2001
+
