@@ -15,7 +15,7 @@ resource vnetmanager 'Microsoft.Network/networkManagers@2024-10-01' = {
   }
 }
 
-resource ipampool 'Microsoft.Network/networkManagers/ipamPools@2024-05-01' = {
+resource ipampool 'Microsoft.Network/networkManagers/ipamPools@2024-10-01' = {
   name: 'ipamPool'
   location: location
   parent: vnetmanager
