@@ -3,7 +3,7 @@ targetScope = 'resourceGroup'
 param Location string 
 param AddressSpace string
 
-resource vnetLandingZone 'Microsoft.Network/virtualNetworks@2019-11-01' = {
+resource vnetLandingZone 'Microsoft.Network/virtualNetworks@2019-12-01' = {
   name: 'vnet-DEMOLandingZone1'
   location: Location
   properties: {
