@@ -80,7 +80,7 @@ resource privateDNSZoneLinkToSpoke 'Microsoft.Network/privateDnsZones/virtualNet
   }
 }
 
-resource privateDNSZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-09-01' = {
+resource privateDNSZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
   name: 'dnsGroupName'
   parent: privateEndpoint
   properties: {
