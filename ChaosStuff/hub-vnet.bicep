@@ -6,7 +6,7 @@ param dnsoutboundrange string
 param bastionrange string
 
 
-resource hubvnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
+resource hubvnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'vnet-Hub'
   location: location
   properties: {

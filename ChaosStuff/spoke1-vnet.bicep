@@ -20,7 +20,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-11-01' = {
   }
 }
 
-resource Spoke1 'Microsoft.Network/virtualNetworks@2023-09-01' = {
+resource Spoke1 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'vnet-spoke1'
   location: location
   properties: {
