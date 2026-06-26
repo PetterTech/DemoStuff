@@ -1,6 +1,6 @@
 param location string
 
-resource BastionHub 'Microsoft.Network/virtualNetworks@2019-11-01' = {
+resource BastionHub 'Microsoft.Network/virtualNetworks@2019-12-01' = {
   name: 'BastionHub-vnet'
   location: location
   properties: {
@@ -26,7 +26,7 @@ resource BastionHub 'Microsoft.Network/virtualNetworks@2019-11-01' = {
   }
 }
 
-resource BastionSpoke1 'Microsoft.Network/virtualNetworks@2019-11-01' = {
+resource BastionSpoke1 'Microsoft.Network/virtualNetworks@2019-12-01' = {
   name: 'BastionSpoke1-vnet'
   location: location
   properties: {
@@ -46,7 +46,7 @@ resource BastionSpoke1 'Microsoft.Network/virtualNetworks@2019-11-01' = {
   }
 }
 
-resource BastionSpoke2 'Microsoft.Network/virtualNetworks@2019-11-01' = {
+resource BastionSpoke2 'Microsoft.Network/virtualNetworks@2019-12-01' = {
   name: 'BastionSpoke2-vnet'
   location: location
   properties: {
