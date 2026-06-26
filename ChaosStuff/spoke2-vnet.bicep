@@ -3,7 +3,7 @@ param azureFirewallPrivateIP string
 param spoke2iprange string
 param spoke2defaultsubnetrange string
 
-resource routeTable 'Microsoft.Network/routeTables@2023-09-01' = {
+resource routeTable 'Microsoft.Network/routeTables@2023-11-01' = {
   name: 'rt-spoke2'
   location: location
   properties: {
