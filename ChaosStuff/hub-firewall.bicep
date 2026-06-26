@@ -3,7 +3,7 @@ param firewallsubnetID string
 param spoke1iprange string
 param spoke2iprange string
 
-resource publicIP 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
+resource publicIP 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: 'pip-AzureFirewall'
   location: location
   properties: {
