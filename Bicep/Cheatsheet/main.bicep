@@ -99,7 +99,7 @@ resource aStorageAccountThatAlreadyExistsInDifferentResourceGroup 'Microsoft.Sto
   scope: resourceGroup('differentResourceGroup')
 }
 
-resource childResource 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+resource childResource 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: aStorageAccount
   name: 'default'
   properties: {
