@@ -117,7 +117,7 @@ resource childResource 'Microsoft.Storage/storageAccounts/blobServices@2023-01-0
   }
 }
 
-resource anotherChildResource 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
+resource anotherChildResource 'Microsoft.Storage/storageAccounts/fileServices@2023-05-01' = {
   name: 'storageaccount10/default'
   properties: {
     cors: {
