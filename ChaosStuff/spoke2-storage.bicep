@@ -22,7 +22,7 @@ resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01'
   parent: storageAccount
 }
 
-resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = {
   name: 'share'
   parent: fileService
   properties: {
