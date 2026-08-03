@@ -64,12 +64,12 @@ resource vNet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
   }
 }
 
-resource vmsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource vmsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' existing = {
   name: vNetSubnetName
   parent: vNet
 }
 
-resource bastionSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource bastionSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' existing = {
   name: bastionSubnetName
   parent: vNet
 }
