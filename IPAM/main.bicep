@@ -38,7 +38,7 @@ resource staticcidr 'Microsoft.Network/networkManagers/ipamPools/staticCidrs@202
   }
 }
 
-resource testnet1 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+resource testnet1 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   name: 'vnet-testnet1'
   location: location
   properties: {
