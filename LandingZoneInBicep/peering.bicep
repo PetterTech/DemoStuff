@@ -10,7 +10,7 @@ var LocalVnetName = last(LocalVnetNameAsArray)
 var RemoteVnetNameAsArray = split(RemoteVnetID,'/')
 var RemoteVnetName = last(RemoteVnetNameAsArray)
 
-resource peer 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-07-01' = {
+resource peer 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-11-01' = {
   name: '${LocalVnetName}/peer-${RemoteVnetName}'
   properties: {
     allowVirtualNetworkAccess: true
