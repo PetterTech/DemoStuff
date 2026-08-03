@@ -77,7 +77,7 @@ resource rulesetVnetLink 'Microsoft.Network/dnsForwardingRulesets/virtualNetwork
   }
 }
 
-resource spokevnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
+resource spokevnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'Spoke'
   location: location
   properties: {

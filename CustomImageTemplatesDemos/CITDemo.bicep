@@ -30,7 +30,7 @@ resource natGateway 'Microsoft.Network/natGateways@2023-11-01' = {
   }
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'CITDemo-vnet'
   location: location
   properties: {
