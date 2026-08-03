@@ -54,7 +54,7 @@ var aVariableDefinedByLoop = [for i in range(0,5): {
 }]
 
 //Resources
-resource aStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+resource aStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'storageaccount1'
   location: 'westus'
   kind: 'StorageV2'
@@ -63,7 +63,7 @@ resource aStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-resource manyStorageAccounts 'Microsoft.Storage/storageAccounts@2023-01-01' = [for i in range(0,parameterThatIsANumber): {
+resource manyStorageAccounts 'Microsoft.Storage/storageAccounts@2023-05-01' = [for i in range(0,parameterThatIsANumber): {
   name: 'storageaccount${i}'
   location: 'westus'
   kind: 'StorageV2'
@@ -72,7 +72,7 @@ resource manyStorageAccounts 'Microsoft.Storage/storageAccounts@2023-01-01' = [f
   }
 }]
 
-resource aStorageAccountIfTrue 'Microsoft.Storage/storageAccounts@2023-01-01' = if (parameterThatIsABoolean) {
+resource aStorageAccountIfTrue 'Microsoft.Storage/storageAccounts@2023-05-01' = if (parameterThatIsABoolean) {
   name: 'storageaccount20'
   location: 'westus'
   kind: 'StorageV2'
@@ -81,7 +81,7 @@ resource aStorageAccountIfTrue 'Microsoft.Storage/storageAccounts@2023-01-01' = 
   }
 }
 
-resource aStorageAccountIf5 'Microsoft.Storage/storageAccounts@2023-01-01' = if (parameterThatIsANumber == 5) {
+resource aStorageAccountIf5 'Microsoft.Storage/storageAccounts@2023-05-01' = if (parameterThatIsANumber == 5) {
   name: 'storageaccount30'
   location: 'westus'
   kind: 'StorageV2'
@@ -90,11 +90,11 @@ resource aStorageAccountIf5 'Microsoft.Storage/storageAccounts@2023-01-01' = if 
   }
 }
 
-resource aStorageAccountThatAlreadyExistsInSameResourceGroup 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+resource aStorageAccountThatAlreadyExistsInSameResourceGroup 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: 'storageaccount'
 }
 
-resource aStorageAccountThatAlreadyExistsInDifferentResourceGroup 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+resource aStorageAccountThatAlreadyExistsInDifferentResourceGroup 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: 'storageaccount40'
   scope: resourceGroup('differentResourceGroup')
 }
