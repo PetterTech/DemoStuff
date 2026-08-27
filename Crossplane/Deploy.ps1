@@ -339,16 +339,22 @@ catch {
 Write-Progress -Id 0 -Activity 'Crossplane deployment' -Status 'Part 5 of 6 — Installing Crossplane' -PercentComplete 67 -ErrorAction SilentlyContinue
 Write-Verbose 'Installing Crossplane...'
 
-# Remove the ValidatingAdmissionPolicy binding that conflicts with Crossplane
+# Remove ValidatingAdmissionPolicy bindings that conflict with Crossplane.
+# aks-managed-block-nodes-proxy-rbac-binding: blocked Crossplane's null-rules ClusterRoles (Crossplane v1).
+# aks-managed-block-webhook-configs-targeting-protected-resources-binding: blocked Crossplane v2's
+#   crossplane-no-usages ValidatingWebhookConfiguration from targeting TokenReviews/CSRs.
+# Both are deleted best-effort — they may be absent or already protected on newer AKS builds.
+# The webhooks.enabled=false Helm value is the primary workaround for the second binding.
 kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found 2>$null
-# Intentionally not checking exit code — binding may already be absent
+kubectl delete validatingadmissionpolicybinding aks-managed-block-webhook-configs-targeting-protected-resources-binding --ignore-not-found 2>$null
+# Intentionally not checking exit codes — bindings may be absent or protected
 
 try {
     Write-Verbose 'Adding Crossplane Helm repo...'
-    helm repo add crossplane-stable https://charts.crossplane.io/stable --force-update | Out-Null
+    helm repo add crossplane-stable https://charts.crossplane.io/stable --force-update
     Assert-ExitCode 'helm repo add failed.'
 
-    helm repo update | Out-Null
+    helm repo update
     Assert-ExitCode 'helm repo update failed.'
     Write-Verbose 'Helm repo configured.'
 }

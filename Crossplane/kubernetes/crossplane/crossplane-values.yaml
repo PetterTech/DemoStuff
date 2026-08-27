@@ -1,3 +1,11 @@
 # Crossplane Helm values
 # Used with: helm install crossplane crossplane-stable/crossplane -f crossplane-values.yaml
 replicas: 1
+
+# Crossplane v2 installs a ValidatingWebhookConfiguration (crossplane-no-usages) that
+# targets TokenReviews and CertificateSigningRequests — resources protected by AKS Automatic's
+# built-in ValidatingAdmissionPolicy. Disabling webhooks is the supported workaround for
+# AKS Automatic clusters.
+# NOTE: This means Crossplane Usage objects will not be enforced at admission time.
+webhooks:
+  enabled: false
