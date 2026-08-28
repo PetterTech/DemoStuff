@@ -345,8 +345,8 @@ Write-Verbose 'Installing Crossplane...'
 #   crossplane-no-usages ValidatingWebhookConfiguration from targeting TokenReviews/CSRs.
 # Both are deleted best-effort — they may be absent or already protected on newer AKS builds.
 # The webhooks.enabled=false Helm value is the primary workaround for the second binding.
-kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found 2>$null
-kubectl delete validatingadmissionpolicybinding aks-managed-block-webhook-configs-targeting-protected-resources-binding --ignore-not-found 2>$null
+kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found
+kubectl delete validatingadmissionpolicybinding aks-managed-block-webhook-configs-targeting-protected-resources-binding --ignore-not-found
 # Intentionally not checking exit codes — bindings may be absent or protected
 
 try {
