@@ -1,8 +1,8 @@
 @description('Project name used for resource naming')
 param projectName string = 'crossplane'
 
-@description('Azure region for all resources')
-param location string = 'swedencentral'
+@description('Azure region for all resources — defaults to the resource group location')
+param location string = resourceGroup().location
 
 @description('Principal ID of the user to assign AKS RBAC Cluster Admin')
 param clusterAdminPrincipalId string

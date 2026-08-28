@@ -2,7 +2,11 @@ param clusterName string
 param location string
 param clusterAdminPrincipalId string
 
-resource aks 'Microsoft.ContainerService/managedClusters@2024-10-01' = {
+// AKS Automatic: system node pools are managed by Azure and must NOT be declared here —
+// an explicit agentPoolProfiles system pool makes cluster creation fail.
+// OIDC issuer and workload identity are on by default for Automatic, but are kept explicit
+// because the identity module depends on the issuer URL output.
+resource aks 'Microsoft.ContainerService/managedClusters@2026-02-01' = {
   name: clusterName
   location: location
   sku: {
@@ -12,15 +16,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-10-01' = {
     type: 'SystemAssigned'
   }
   properties: {
-    dnsPrefix: clusterName
-    agentPoolProfiles: [
-      {
-        name: 'systempool'
-        mode: 'System'
-        count: 3
-        vmSize: 'Standard_D4ds_v5'
-      }
-    ]
     oidcIssuerProfile: {
       enabled: true
     }
