@@ -67,11 +67,46 @@ $RequiredModules = @('Az.Accounts', 'Az.Resources', 'Az.Aks')
 
 $ElapsedTime = [System.Diagnostics.Stopwatch]::StartNew()
 
+function Assert-ExitCode {
+    <#
+    .SYNOPSIS
+        Throws if the last external command returned a non-zero exit code.
+    .PARAMETER Message
+        Error message to include in the thrown exception.
+    .EXAMPLE
+        Assert-ExitCode 'kubectl apply failed.'
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, HelpMessage = 'Error message to throw on failure.')]
+        [string]$Message
+    )
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Message (exit code: $LASTEXITCODE)"
+    }
+}
+
 ########################################################################
 #                          Preparations                                #
 ########################################################################
 
 #region Preparations
+
+Write-Verbose 'Checking required external tools are on PATH.'
+foreach ($Tool in @('az', 'kubectl', 'helm', 'kubelogin')) {
+    if (-not (Get-Command $Tool -ErrorAction SilentlyContinue)) {
+        throw "Required tool '$Tool' not found on PATH. Install it before running this script."
+    }
+    Write-Verbose "Found '$Tool'."
+}
+
+# kubelogin runs in azurecli mode, which authenticates kubectl with the Azure CLI token —
+# verify the az CLI session up front instead of failing halfway through the deployment
+Write-Verbose 'Verifying Azure CLI login (used by kubelogin for kubectl auth).'
+az account show --output none
+Assert-ExitCode 'No Azure CLI session found. Run ''az login'' first — kubelogin uses the az CLI token to authenticate kubectl.'
+Write-Verbose 'Azure CLI session found.'
 
 Write-Verbose 'Ensuring required Az modules are installed.'
 
@@ -133,26 +168,6 @@ if ($Cleanup) {
 
 #endregion Cleanup
 
-function Assert-ExitCode {
-    <#
-    .SYNOPSIS
-        Throws if the last external command returned a non-zero exit code.
-    .PARAMETER Message
-        Error message to include in the thrown exception.
-    .EXAMPLE
-        Assert-ExitCode 'kubectl apply failed.'
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory, HelpMessage = 'Error message to throw on failure.')]
-        [string]$Message
-    )
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Message (exit code: $LASTEXITCODE)"
-    }
-}
-
 ########################################################################
 #               Part 1 - Deploying infrastructure                     #
 ########################################################################
@@ -174,11 +189,6 @@ if (-not $SkipInfrastructure) {
         throw
     }
 
-    # Save deployment context so cleanup can find the correct resource group
-    if (-not (Test-Path $GeneratedDir)) { New-Item -Path $GeneratedDir -ItemType Directory -Force | Out-Null }
-    @{ ResourceGroupName = $ResourceGroupName } | ConvertTo-Json | Set-Content (Join-Path $GeneratedDir 'deployment-context.json')
-    Write-Verbose 'Saved deployment context to .generated/deployment-context.json.'
-
     try {
         $Context = Get-AzContext -ErrorAction Stop
         if (-not $Context) { throw 'No Azure context found. Run Connect-AzAccount first.' }
@@ -198,24 +208,17 @@ if (-not $SkipInfrastructure) {
         throw
     }
 
-    Write-Verbose 'Starting Bicep deployment...'
-    Write-Progress -Id 1 -ParentId 0 -Activity 'Infrastructure' -Status 'Bicep deployment in progress — this may take a while...' -PercentComplete 25 -ErrorAction SilentlyContinue
+    Write-Verbose 'Starting Bicep deployment (typically takes 5-10 minutes)...'
+    Write-Progress -Id 1 -ParentId 0 -Activity 'Infrastructure' -Status 'Bicep deployment in progress — this may take a while...' -PercentComplete 50 -ErrorAction SilentlyContinue
     try {
-        $DeploymentJob = New-AzResourceGroupDeployment `
+        # Run synchronously so ARM error details surface directly in the terminating error
+        $InfraDeployment = New-AzResourceGroupDeployment `
             -Name 'main' `
             -ResourceGroupName $ResourceGroupName `
             -TemplateFile "$ScriptRoot/infrastructure/main.bicep" `
             -clusterAdminPrincipalId $PrincipalId `
-            -AsJob
-
-        while ($DeploymentJob.State -eq 'Running') {
-            Start-Sleep -Seconds 5
-            $MinutesElapsed = [math]::Round(((Get-Date) - $DeploymentJob.PSBeginTime).TotalMinutes, 1)
-            Write-Progress -Id 1 -ParentId 0 -Activity 'Infrastructure' -Status "Bicep deployment in progress — $MinutesElapsed min elapsed" -PercentComplete 50 -ErrorAction SilentlyContinue
-        }
-
-        $DeploymentJob | Receive-Job -Wait -AutoRemoveJob | Out-Null
-        Write-Verbose 'Bicep deployment complete.'
+            -ErrorAction Stop
+        Write-Verbose "Bicep deployment complete. Provisioning state: $($InfraDeployment.ProvisioningState)."
     }
     catch {
         Write-Verbose "Bicep deployment failed: $($_.Exception.Message)"
@@ -280,6 +283,11 @@ if (Test-Path $GeneratedDir) { Remove-Item $GeneratedDir -Recurse -Force }
 
 Copy-Item -Path (Join-Path $ScriptRoot 'kubernetes') -Destination $GeneratedDir -Recurse
 
+# Save deployment context so -Cleanup can find the correct resource group.
+# Saved here (not in Part 1) because this step recreates the .generated/ folder.
+@{ ResourceGroupName = $ResourceGroupName } | ConvertTo-Json | Set-Content (Join-Path $GeneratedDir 'deployment-context.json')
+Write-Verbose 'Saved deployment context to .generated/deployment-context.json.'
+
 $YamlFiles = Get-ChildItem -Path $GeneratedDir -Recurse -Filter *.yaml
 
 $Progress = 0
@@ -339,15 +347,22 @@ catch {
 Write-Progress -Id 0 -Activity 'Crossplane deployment' -Status 'Part 5 of 6 — Installing Crossplane' -PercentComplete 67 -ErrorAction SilentlyContinue
 Write-Verbose 'Installing Crossplane...'
 
-# Remove ValidatingAdmissionPolicy bindings that conflict with Crossplane.
-# aks-managed-block-nodes-proxy-rbac-binding: blocked Crossplane's null-rules ClusterRoles (Crossplane v1).
-# aks-managed-block-webhook-configs-targeting-protected-resources-binding: blocked Crossplane v2's
-#   crossplane-no-usages ValidatingWebhookConfiguration from targeting TokenReviews/CSRs.
-# Both are deleted best-effort — they may be absent or already protected on newer AKS builds.
-# The webhooks.enabled=false Helm value is the primary workaround for the second binding.
-kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found
-kubectl delete validatingadmissionpolicybinding aks-managed-block-webhook-configs-targeting-protected-resources-binding --ignore-not-found
-# Intentionally not checking exit codes — bindings may be absent or protected
+try {
+    # AKS's aks-managed-block-nodes-proxy-rbac ValidatingAdmissionPolicy has a CEL bug
+    # (Azure/AKS#5640) that rejects Crossplane's aggregated ClusterRoles (null rules).
+    # Delete the binding so the Helm install can create them — AKS recreates the binding
+    # on its next reconciliation, which is fine once the roles exist.
+    # Crossplane's webhook conflict with AKS Automatic is handled separately via
+    # webhooks.enabled=false in crossplane-values.yaml.
+    Write-Verbose 'Removing AKS ValidatingAdmissionPolicy binding that blocks Crossplane ClusterRoles...'
+    kubectl delete validatingadmissionpolicybinding aks-managed-block-nodes-proxy-rbac-binding --ignore-not-found
+    Assert-ExitCode 'Failed to delete ValidatingAdmissionPolicyBinding aks-managed-block-nodes-proxy-rbac-binding.'
+    Write-Verbose 'ValidatingAdmissionPolicy binding removed (or already absent).'
+}
+catch {
+    Write-Verbose "Failed to remove ValidatingAdmissionPolicy binding: $($_.Exception.Message)"
+    throw
+}
 
 try {
     Write-Verbose 'Adding Crossplane Helm repo...'
@@ -366,12 +381,15 @@ catch {
 try {
     Write-Verbose 'Installing Crossplane via Helm...'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Status 'Installing Crossplane chart — waiting for pods...' -PercentComplete 50 -ErrorAction SilentlyContinue
+    # --timeout 15m: on AKS Automatic the first workload triggers node autoprovisioning,
+    # which can exceed helm's default 5m wait
     helm upgrade crossplane crossplane-stable/crossplane `
         --install `
         --namespace crossplane-system `
         --create-namespace `
         --values "$GeneratedDir/crossplane/crossplane-values.yaml" `
-        --wait
+        --wait `
+        --timeout 15m
     Assert-ExitCode 'helm upgrade/install crossplane failed.'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Helm install' -Completed -ErrorAction SilentlyContinue
     Write-Verbose 'Crossplane installed and ready.'
@@ -412,7 +430,7 @@ try {
 
     Write-Verbose 'Waiting for provider-family-azure to become healthy...'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Providers' -Status 'Waiting for provider-family-azure to become healthy...' -PercentComplete 33 -ErrorAction SilentlyContinue
-    kubectl wait --for=condition=Healthy providers.pkg.crossplane.io/provider-family-azure --timeout=300s
+    kubectl wait --for=condition=Healthy providers.pkg.crossplane.io/provider-family-azure --timeout=600s
     Assert-ExitCode 'provider-family-azure did not become healthy within timeout.'
     Write-Verbose 'provider-family-azure is healthy.'
 }
@@ -439,7 +457,7 @@ try {
 
     Write-Verbose 'Waiting for provider-azure-storage to become healthy...'
     Write-Progress -Id 1 -ParentId 0 -Activity 'Providers' -Status 'Waiting for provider-azure-storage to become healthy...' -PercentComplete 66 -ErrorAction SilentlyContinue
-    kubectl wait --for=condition=Healthy providers.pkg.crossplane.io/provider-azure-storage --timeout=300s
+    kubectl wait --for=condition=Healthy providers.pkg.crossplane.io/provider-azure-storage --timeout=600s
     Assert-ExitCode 'provider-azure-storage did not become healthy within timeout.'
     Write-Verbose 'provider-azure-storage is healthy.'
 }
