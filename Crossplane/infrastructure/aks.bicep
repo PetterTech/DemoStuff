@@ -29,9 +29,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-10-01' = {
         enabled: true
       }
     }
-    safeguardsProfile: {
-      level: 'Warning'
-    }
   }
 }
 
