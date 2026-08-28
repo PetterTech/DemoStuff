@@ -93,20 +93,24 @@ function Assert-ExitCode {
 
 #region Preparations
 
-Write-Verbose 'Checking required external tools are on PATH.'
-foreach ($Tool in @('az', 'kubectl', 'helm', 'kubelogin')) {
-    if (-not (Get-Command $Tool -ErrorAction SilentlyContinue)) {
-        throw "Required tool '$Tool' not found on PATH. Install it before running this script."
+# Cleanup only uses Az PowerShell cmdlets and local file operations —
+# skip the deployment-only tool and Azure CLI session checks in that mode
+if (-not $Cleanup) {
+    Write-Verbose 'Checking required external tools are on PATH.'
+    foreach ($Tool in @('az', 'kubectl', 'helm', 'kubelogin')) {
+        if (-not (Get-Command $Tool -ErrorAction SilentlyContinue)) {
+            throw "Required tool '$Tool' not found on PATH. Install it before running this script."
+        }
+        Write-Verbose "Found '$Tool'."
     }
-    Write-Verbose "Found '$Tool'."
-}
 
-# kubelogin runs in azurecli mode, which authenticates kubectl with the Azure CLI token —
-# verify the az CLI session up front instead of failing halfway through the deployment
-Write-Verbose 'Verifying Azure CLI login (used by kubelogin for kubectl auth).'
-az account show --output none
-Assert-ExitCode 'No Azure CLI session found. Run ''az login'' first — kubelogin uses the az CLI token to authenticate kubectl.'
-Write-Verbose 'Azure CLI session found.'
+    # kubelogin runs in azurecli mode, which authenticates kubectl with the Azure CLI token —
+    # verify the az CLI session up front instead of failing halfway through the deployment
+    Write-Verbose 'Verifying Azure CLI login (used by kubelogin for kubectl auth).'
+    az account show --output none
+    Assert-ExitCode 'No Azure CLI session found. Run ''az login'' first — kubelogin uses the az CLI token to authenticate kubectl.'
+    Write-Verbose 'Azure CLI session found.'
+}
 
 Write-Verbose 'Ensuring required Az modules are installed.'
 
