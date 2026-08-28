@@ -193,6 +193,12 @@ if (-not $SkipInfrastructure) {
         throw
     }
 
+    # Save deployment context immediately so -Cleanup can find the new resource
+    # group even if a later step fails before manifest generation
+    if (-not (Test-Path $GeneratedDir)) { New-Item -ItemType Directory -Path $GeneratedDir | Out-Null }
+    @{ ResourceGroupName = $ResourceGroupName } | ConvertTo-Json | Set-Content (Join-Path $GeneratedDir 'deployment-context.json')
+    Write-Verbose 'Saved deployment context to .generated/deployment-context.json.'
+
     try {
         $Context = Get-AzContext -ErrorAction Stop
         if (-not $Context) { throw 'No Azure context found. Run Connect-AzAccount first.' }
@@ -287,8 +293,8 @@ if (Test-Path $GeneratedDir) { Remove-Item $GeneratedDir -Recurse -Force }
 
 Copy-Item -Path (Join-Path $ScriptRoot 'kubernetes') -Destination $GeneratedDir -Recurse
 
-# Save deployment context so -Cleanup can find the correct resource group.
-# Saved here (not in Part 1) because this step recreates the .generated/ folder.
+# Re-save deployment context because recreating .generated/ above wiped it
+# (also covers -SkipInfrastructure runs that never hit the Part 1 save)
 @{ ResourceGroupName = $ResourceGroupName } | ConvertTo-Json | Set-Content (Join-Path $GeneratedDir 'deployment-context.json')
 Write-Verbose 'Saved deployment context to .generated/deployment-context.json.'
 
