@@ -53,6 +53,7 @@ foundry model list
 | `-OpenWebUIPort` | `3000` | Local port for the web UI |
 | `-SkipOpenWebUI` | — | Only start Foundry Local (no web UI) |
 | `-Cleanup` | — | Stop and remove the local demo resources created by the script |
+| `-CleanupWebUI` | — | Reset only the Open WebUI container and persisted data |
 | `-Force` | — | Skip all confirmation prompts during cleanup |
 
 ### Examples
@@ -76,21 +77,21 @@ If the model dropdown is empty, add a Direct Connection manually:
 
 1. Open **Settings** → **Connections** → **Manage Direct Connections**
 2. Click **+**
-3. Set **URL** to match the scheme and port reported by `foundry service status`, using `host.docker.internal` as the host and appending `/v1` (for example, `http://host.docker.internal:<PORT>/v1` or `https://host.docker.internal:<PORT>/v1`)
+3. Set **URL** to match the scheme and port reported by `foundry server status`, using `host.docker.internal` as the host and appending `/v1` (for example, `http://host.docker.internal:<PORT>/v1` or `https://host.docker.internal:<PORT>/v1`)
 4. Set **Auth** to **None**
 5. Click **Save**
 
 ### Foundry Local service errors
 
 ```powershell
-foundry service restart
-foundry service status
+foundry server restart
+foundry server status
 ```
 
 ### Check loaded models
 
 ```powershell
-foundry service ps
+foundry server ps
 ```
 
 ## Cleanup
@@ -103,6 +104,16 @@ Use the `-Cleanup` switch to stop and remove everything:
 
 # Remove everything without prompts
 .\deploy.ps1 -Cleanup -Force
+```
+
+Use `-CleanupWebUI` when you only want to reset Open WebUI while leaving Foundry Local and cached models in place:
+
+```powershell
+# Interactive Open WebUI reset
+.\deploy.ps1 -CleanupWebUI
+
+# Reset Open WebUI without prompts
+.\deploy.ps1 -CleanupWebUI -Force
 ```
 
 ## How It Works
