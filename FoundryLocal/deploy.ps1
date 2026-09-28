@@ -34,9 +34,15 @@
     Open WebUI Docker container and volume, stops the Foundry Local service,
     and optionally uninstalls Foundry Local.
 
+.PARAMETER CleanupWebUI
+    If specified, only removes the Open WebUI Docker container and data volume
+    (resetting all persisted settings, connections, and chat history), then exits.
+    Foundry Local, cached models, and Docker itself are left untouched. Useful for
+    getting a clean Open WebUI state without going through the full -Cleanup flow.
+
 .PARAMETER Force
-    When used with -Cleanup, skips all confirmation prompts and removes
-    everything without asking.
+    When used with -Cleanup or -CleanupWebUI, skips all confirmation prompts and
+    removes everything without asking.
 
 .LINK
     https://learn.microsoft.com/en-us/azure/foundry-local/what-is-foundry-local
@@ -58,6 +64,9 @@ Param(
     [Parameter(HelpMessage = "Tear down the demo environment (remove containers, stop services)")]
     [switch]$Cleanup,
 
+    [Parameter(HelpMessage = "Only remove the Open WebUI container and data volume, then exit")]
+    [switch]$CleanupWebUI,
+
     [Parameter(HelpMessage = "Skip all confirmation prompts during cleanup (remove everything)")]
     [switch]$Force
 )
@@ -66,7 +75,7 @@ Param(
 
 $ContainerName = "open-webui-foundry"
 $VolumeName = "open-webui-foundry"
-$OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.9.1"
+$OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.11.4"
 
 #endregion Variables
 
@@ -77,8 +86,68 @@ $OpenWebUIImage = "ghcr.io/open-webui/open-webui:v0.9.1"
 $ElapsedTime = [System.Diagnostics.Stopwatch]::StartNew()
 
 # Validate parameter combinations
-if ($Force -and -not $Cleanup) {
-    throw "The -Force parameter is only valid when -Cleanup is specified."
+if ($Force -and -not $Cleanup -and -not $CleanupWebUI) {
+    throw "The -Force parameter is only valid when -Cleanup or -CleanupWebUI is specified."
+}
+if ($Cleanup -and $CleanupWebUI) {
+    throw "The -Cleanup and -CleanupWebUI parameters cannot be used together."
+}
+
+########################################################################
+#                    Cleanup Open WebUI only mode                      #
+########################################################################
+
+if ($CleanupWebUI) {
+    Write-Host "Removing Open WebUI container and data volume..." -ForegroundColor Cyan
+
+    $DockerCmdWebUICleanup = Get-Command docker -ErrorAction SilentlyContinue
+    if (-not $DockerCmdWebUICleanup) {
+        Write-Error "Docker was not found in PATH; nothing to clean up."
+        exit 1
+    }
+
+    $ExistingWebUIContainer = docker ps -a --filter "name=^/$ContainerName`$" --format "{{.Names}}" 2>$null
+    if ($ExistingWebUIContainer -contains $ContainerName) {
+        try {
+            Write-Verbose "Stopping and removing Open WebUI container '$ContainerName'..."
+            docker rm -f $ContainerName | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "docker rm exited with code $LASTEXITCODE." }
+            Write-Host "  Removed Docker container '$ContainerName'." -ForegroundColor Green
+        }
+        catch {
+            Write-Verbose "Failed to remove container: $_"
+            Write-Host "  Could not remove container '$ContainerName'." -ForegroundColor Yellow
+        }
+    }
+    else {
+        Write-Host "  No Open WebUI container found (already removed)." -ForegroundColor DarkGray
+    }
+
+    $ExistingWebUIVolume = docker volume ls --filter "name=$VolumeName" --format "{{.Name}}" 2>$null
+    if ($ExistingWebUIVolume) {
+        if ($Force -or (Read-Host "Remove Open WebUI data volume (deletes chat history and all settings)? (Y/N)") -match '^[Yy]$') {
+            try {
+                Write-Verbose "Removing Docker volume '$VolumeName'..."
+                docker volume rm $VolumeName | Out-Null
+                if ($LASTEXITCODE -ne 0) { throw "docker volume rm exited with code $LASTEXITCODE." }
+                Write-Host "  Removed Docker volume '$VolumeName'." -ForegroundColor Green
+            }
+            catch {
+                Write-Verbose "Failed to remove volume: $_"
+                Write-Host "  Could not remove volume. It may still be in use." -ForegroundColor Yellow
+            }
+        }
+        else {
+            Write-Host "  Kept Docker volume (chat history and settings preserved)." -ForegroundColor DarkGray
+        }
+    }
+    else {
+        Write-Host "  No Open WebUI volume found (already removed)." -ForegroundColor DarkGray
+    }
+
+    Write-Host ""
+    Write-Host "Open WebUI reset complete. Re-run this script to start a fresh instance." -ForegroundColor Green
+    exit 0
 }
 
 ########################################################################
@@ -162,15 +231,16 @@ if ($Cleanup) {
     $StopTempErr = [System.IO.Path]::GetTempFileName()
     try {
         Write-Verbose "Stopping Foundry Local service..."
-        $StopProc = Start-Process -FilePath "foundry" -ArgumentList "service","stop" -NoNewWindow -Wait -PassThru -RedirectStandardError $StopTempErr
+        $StopProc = Start-Process -FilePath "foundry" -ArgumentList "server","stop" -NoNewWindow -Wait -PassThru -RedirectStandardError $StopTempErr
         if ($StopProc.ExitCode -ne 0) {
-            throw "foundry service stop exited with code $($StopProc.ExitCode)."
+            $StopError = Get-Content -Path $StopTempErr -Raw -ErrorAction SilentlyContinue
+            throw "foundry server stop exited with code $($StopProc.ExitCode): $StopError"
         }
         Write-Verbose "Successfully stopped Foundry Local service."
         Write-Host "  Stopped Foundry Local service." -ForegroundColor Green
     }
     catch {
-        Write-Verbose "Foundry service stop failed (may not be running): $_"
+        Write-Verbose "Foundry server stop failed (may not be running): $_"
         Write-Host "  Foundry Local service was not running." -ForegroundColor DarkGray
     }
     finally {
@@ -327,6 +397,32 @@ if ($IsWindows) {
 }
 Write-Verbose "Running on $Platform."
 
+if ($IsMacOS) {
+    $MacArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+    if ($MacArchitecture -ne [System.Runtime.InteropServices.Architecture]::Arm64) {
+        Write-Error "Foundry Local requires an Apple Silicon Mac (Arm64). Detected architecture: $MacArchitecture."
+        exit 1
+    }
+
+    $MacOSVersionText = sw_vers -productVersion 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        try {
+            $MacOSVersion = [version]$MacOSVersionText
+            if ($MacOSVersion.Major -lt 12) {
+                Write-Error "Foundry Local requires macOS 12 or later. Detected macOS $MacOSVersionText."
+                exit 1
+            }
+            Write-Verbose "Foundry Local macOS requirements are satisfied (Arm64, macOS $MacOSVersionText)."
+        }
+        catch {
+            Write-Verbose "Could not parse the macOS version '$MacOSVersionText': $_"
+        }
+    }
+    else {
+        Write-Verbose "Could not determine the macOS version with sw_vers."
+    }
+}
+
 # Check hardware virtualization support (required for Docker / Open WebUI)
 if (-not $SkipOpenWebUI) {
     Write-Verbose "Checking hardware virtualization support..."
@@ -439,7 +535,7 @@ if (-not $SkipOpenWebUI) {
         Write-Verbose "Docker CLI found at $($DockerCmd.Source)."
         # Then check if the engine is running
         try {
-            $DockerInfo = docker info 2>&1
+            $null = docker info 2>&1
             if ($LASTEXITCODE -eq 0) {
                 $DockerReady = $true
                 Write-Verbose "Docker engine is running."
@@ -652,13 +748,32 @@ Write-Host "Starting Foundry Local service..." -ForegroundColor Cyan
 Write-Verbose "Starting Foundry Local service (timeout: 3 minutes)..."
 
 $ServiceStarted = $false
-$ServiceCommands = @("start", "restart")
-foreach ($ServiceAction in $ServiceCommands) {
-    Write-Verbose "Attempting 'foundry service $ServiceAction'..."
+$StatusOutput = foundry server status --output json 2>$null | Out-String
+if ($LASTEXITCODE -eq 0) {
+    try {
+        $CurrentStatus = $StatusOutput | ConvertFrom-Json -ErrorAction Stop
+        if ($CurrentStatus.running -and $CurrentStatus.state -eq "ready") {
+            $ServiceStarted = $true
+            Write-Verbose "Foundry Local service is already running and ready."
+            Write-Host "Foundry Local service is already running." -ForegroundColor Green
+        }
+    }
+    catch {
+        Write-Verbose "Could not parse the existing Foundry Local server status: $_"
+    }
+}
+
+$ServerCommands = @("start", "restart")
+foreach ($ServerAction in $ServerCommands) {
+    if ($ServiceStarted) {
+        break
+    }
+
+    Write-Verbose "Attempting 'foundry server $ServerAction'..."
     $TempOut = [System.IO.Path]::GetTempFileName()
     $TempErr = [System.IO.Path]::GetTempFileName()
     try {
-        $Proc = Start-Process -FilePath "foundry" -ArgumentList "service", $ServiceAction `
+        $Proc = Start-Process -FilePath "foundry" -ArgumentList "server", $ServerAction `
             -RedirectStandardOutput $TempOut -RedirectStandardError $TempErr `
             -PassThru -NoNewWindow
         # Wait up to 3 minutes for the service to start
@@ -668,27 +783,28 @@ foreach ($ServiceAction in $ServiceCommands) {
             Start-Sleep -Seconds 2
             $Waited += 2
             if ($Waited % 10 -eq 0) {
-                Write-Host "  Still waiting for Foundry Local service to $ServiceAction... ($Waited`s)" -ForegroundColor DarkGray
+                Write-Host "  Still waiting for Foundry Local service to $ServerAction... ($Waited`s)" -ForegroundColor DarkGray
             }
         }
         if (-not $Proc.HasExited) {
-            Write-Verbose "foundry service $ServiceAction timed out after $ServiceTimeout seconds, killing process."
+            Write-Verbose "foundry server $ServerAction timed out after $ServiceTimeout seconds, killing process."
             $Proc.Kill()
             $Proc.WaitForExit()
             continue
         }
         if ($Proc.ExitCode -eq 0) {
             $ServiceStarted = $true
-            Write-Verbose "Foundry Local service $($ServiceAction) succeeded."
+            Write-Verbose "Foundry Local service $($ServerAction) succeeded."
             Write-Host "Foundry Local service is running." -ForegroundColor Green
             break
         }
         else {
-            Write-Verbose "foundry service $ServiceAction exited with code $($Proc.ExitCode)."
+            $ServerError = Get-Content -Path $TempErr -Raw -ErrorAction SilentlyContinue
+            Write-Verbose "foundry server $ServerAction exited with code $($Proc.ExitCode): $ServerError"
         }
     }
     catch {
-        Write-Verbose "foundry service $ServiceAction failed: $_"
+        Write-Verbose "foundry server $ServerAction failed: $_"
     }
     finally {
         Remove-Item $TempOut -ErrorAction SilentlyContinue
@@ -697,7 +813,7 @@ foreach ($ServiceAction in $ServiceCommands) {
 }
 
 if (-not $ServiceStarted) {
-    Write-Error "Failed to start Foundry Local service. Try running 'foundry service start' manually."
+    Write-Error "Failed to start Foundry Local service. Try running 'foundry server start' manually."
     exit 1
 }
 
@@ -778,25 +894,23 @@ catch {
 Write-Host "Getting Foundry Local endpoint..." -ForegroundColor Cyan
 try {
     Write-Verbose "Querying Foundry Local service status..."
-    $ServiceOutput = foundry service status 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { throw "foundry service status exited with code $LASTEXITCODE" }
+    $ServiceOutput = foundry server status --output json 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "foundry server status exited with code $LASTEXITCODE" }
     Write-Verbose "Service status output: $ServiceOutput"
 
-    # Extract the endpoint URL exactly as reported by the service so the scheme and host are preserved.
-    if ($ServiceOutput -match '((https?)://[^/\s]+:(\d+))') {
-        $FoundryEndpoint = $Matches[1]
-        $FoundryScheme = $Matches[2]
-        $FoundryPort = $Matches[3]
-        Write-Verbose "Foundry Local endpoint detected from service status: $FoundryEndpoint"
-        Write-Host "Foundry Local running at $FoundryEndpoint" -ForegroundColor Green
-    }
-    else {
-        throw "Could not parse the Foundry Local endpoint from service status output."
-    }
+    $ServerStatus = $ServiceOutput | ConvertFrom-Json -ErrorAction Stop
+    $FoundryEndpoint = $ServerStatus.webUrls | Select-Object -First 1
+    if (-not $FoundryEndpoint) { throw "Foundry Local server status did not contain a web URL." }
+
+    $FoundryUri = [System.Uri]$FoundryEndpoint
+    $FoundryScheme = $FoundryUri.Scheme
+    $FoundryPort = $FoundryUri.Port
+    Write-Verbose "Foundry Local endpoint detected from server status: $FoundryEndpoint"
+    Write-Host "Foundry Local running at $FoundryEndpoint" -ForegroundColor Green
 }
 catch {
     Write-Verbose "Endpoint detection failed: $_"
-    Write-Error "Failed to determine Foundry Local endpoint. Run 'foundry service status' manually to check."
+    Write-Error "Failed to determine Foundry Local endpoint. Run 'foundry server status' manually to check."
     exit 1
 }
 
@@ -809,7 +923,7 @@ if ($SkipOpenWebUI) {
     Write-Host " Model    : $Model" -ForegroundColor White
     Write-Host ""
     Write-Host " Test it with:" -ForegroundColor DarkGray
-    Write-Host "   foundry model run $Model" -ForegroundColor DarkGray
+    Write-Host "   foundry run $Model" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "Elapsed time: $($ElapsedTime.Elapsed.ToString('hh\:mm\:ss'))" -ForegroundColor DarkGray
     exit 0
@@ -860,11 +974,24 @@ catch {
 # This is NOT suitable for production use — always enable auth in real deployments.
 try {
     Write-Verbose "Starting Open WebUI container on port $OpenWebUIPort..."
+    # DEMO SHORTCUT: the "Builtin Tools" capability (the full category list — Memory,
+    # Web Search, Image Generation, Code Interpreter, Automations, etc.) is disabled
+    # for every model by default via DEFAULT_MODEL_METADATA — small local models can
+    # produce garbled output when Open WebUI injects tool-calling schemas they don't
+    # handle well. Re-enable per-model in Workspace > Models if needed.
     docker run -d `
         -p "127.0.0.1:$($OpenWebUIPort):8080" `
         -e "OPENAI_API_BASE_URLS=$FoundryDockerEndpoint" `
         -e "OPENAI_API_KEYS=OPENAI_API_KEY" `
         -e "WEBUI_AUTH=False" `
+        -e "ENABLE_WEB_SEARCH=False" `
+        -e "ENABLE_IMAGE_GENERATION=False" `
+        -e "ENABLE_CODE_EXECUTION=False" `
+        -e "ENABLE_CODE_INTERPRETER=False" `
+        -e "ENABLE_AUTOCOMPLETE_GENERATION=False" `
+        -e "ENABLE_MEMORIES=False" `
+        -e "ENABLE_AUTOMATIONS=False" `
+        -e 'DEFAULT_MODEL_METADATA={"capabilities":{"builtin_tools":false}}' `
         -v "$($VolumeName):/app/backend/data" `
         --name $ContainerName `
         --add-host "host.docker.internal:host-gateway" `
@@ -918,10 +1045,14 @@ Write-Host " Model      : $Model" -ForegroundColor White
 Write-Host ""
 Write-Host " If the model does not appear in Open WebUI," -ForegroundColor DarkGray
 Write-Host " add a Direct Connection in Settings > Connections:" -ForegroundColor DarkGray
-Write-Host "   URL : $FoundryDockerEndpoint/v1" -ForegroundColor DarkGray
+Write-Host "   URL : $FoundryDockerEndpoint" -ForegroundColor DarkGray
 Write-Host "   Auth: None" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host " To stop: docker rm -f $ContainerName && foundry service stop" -ForegroundColor DarkGray
+Write-Host " Built-in tools (web search, image gen, code interpreter, memory," -ForegroundColor DarkGray
+Write-Host " automations) are disabled by default to avoid confusing small local" -ForegroundColor DarkGray
+Write-Host " models — enable individual ones in Admin Settings if you need them." -ForegroundColor DarkGray
+Write-Host ""
+Write-Host " To stop: docker rm -f $ContainerName && foundry server stop" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Elapsed time: $($ElapsedTime.Elapsed.ToString('hh\:mm\:ss'))" -ForegroundColor DarkGray
 
