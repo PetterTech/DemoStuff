@@ -1,0 +1,7 @@
+# Helm values for Radius
+# Enable Azure Workload Identity support so the UCP service account can exchange
+# AKS OIDC tokens for Azure credentials without storing secrets in the cluster.
+global:
+  azureWorkloadIdentity:
+    enabled: true
+    clientId: "<RADIUS_IDENTITY_CLIENT_ID>"
