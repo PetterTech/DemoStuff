@@ -45,6 +45,7 @@ Crossplane/
 
 - Azure PowerShell (`Az.Accounts`, `Az.Resources`, `Az.Aks` modules) with an active login (`Connect-AzAccount`)
   - The deploy script will auto-install missing modules into the CurrentUser scope
+- Azure CLI with an active login (`az login`) — `kubelogin` uses the az CLI token to authenticate `kubectl`
 - `kubectl` and `kubelogin`
 - Helm 3
 
